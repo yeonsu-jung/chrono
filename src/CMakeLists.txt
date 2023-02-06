@@ -8,6 +8,7 @@
 # Optionally enable building the various programs
 #-----------------------------------------------------------------------------
 
+option(BUILD_YJUNG "Yeonsu Jung's addition" ON)
 option(BUILD_DEMOS "Build demo programs" OFF)
 option(BUILD_BENCHMARKING "Build benchmark tests" OFF)
 
@@ -673,6 +674,11 @@ if(BUILD_TESTING)
 endif()
 if(BUILD_BENCHMARKING)
   add_subdirectory(tests/benchmark_tests)
+endif()
+
+# YJUNG
+if(BUILD_YJUNG)
+  add_subdirectory(yjung)
 endif()
 
 #------------------------------------------------------------
