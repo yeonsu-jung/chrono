@@ -2,6 +2,9 @@
 # Add executables
 MESSAGE(STATUS "Yeonsu Jung's sketchy code...")
 
+include_directories( ${CH_IRRLICHTINC} )
+MESSAGE(STATUS ${CH_IRRLICHTINC} )
+
 ADD_EXECUTABLE(yjung yjung.cpp)
 TARGET_LINK_LIBRARIES(yjung ChronoEngine)
 ADD_DEPENDENCIES(yjung ChronoEngine)

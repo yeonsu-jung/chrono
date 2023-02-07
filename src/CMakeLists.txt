@@ -11,6 +11,7 @@
 option(BUILD_YJUNG "Yeonsu Jung's addition" ON)
 option(BUILD_DEMOS "Build demo programs" OFF)
 option(BUILD_BENCHMARKING "Build benchmark tests" OFF)
+option(BUILD_DEMOS_MBS "Build demo programs for MBS module" OFF)
 
 #-----------------------------------------------------------------------------
 # Search prefixes specified by <PackageName>_ROOT
@@ -676,9 +677,15 @@ if(BUILD_BENCHMARKING)
   add_subdirectory(tests/benchmark_tests)
 endif()
 
+if(BUILD_DEMOS_MBS)
+  message("WHAT")
+endif()
+
+
 # YJUNG
 if(BUILD_YJUNG)
   add_subdirectory(yjung)
+  add_subdirectory(demos/irrlicht)
 endif()
 
 #------------------------------------------------------------

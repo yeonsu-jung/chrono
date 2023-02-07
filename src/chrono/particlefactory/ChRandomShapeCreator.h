@@ -207,6 +207,7 @@ class ChRandomShapeCreatorCylinders : public ChRandomShapeCreator {
     /// Set the statistical distribution for the length ratio (length = diameter*length_factor).
     void SetLengthFactorDistribution(std::shared_ptr<ChDistribution> mdistr) { length_factor = mdistr; }
 
+    void SetMaterial(std::shared_ptr<ChMaterialSurfaceNSC> mdistr) { material = mdistr; }
     /// Set the statistical distribution for the random density.
     void SetDensityDistribution(std::shared_ptr<ChDistribution> mdistr) { density = mdistr; }
 

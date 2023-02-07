@@ -12,197 +12,168 @@
 // Authors: Alessandro Tasora
 // =============================================================================
 //
-// SPH smooth particle hydrodynamics demo
+// Demo code about
+// - using the ChParticleEmitter to create flows of random shapes
+// - use Irrlicht to display objects.
 //
 // =============================================================================
 
-#include "chrono/core/ChRealtimeStep.h"
 #include "chrono/physics/ChSystemNSC.h"
-#include "chrono/physics/ChBodyEasy.h"
-#include "chrono/physics/ChProximityContainerSPH.h"
-#include "chrono/physics/ChMatterSPH.h"
+#include "chrono/particlefactory/ChParticleEmitter.h"
+#include "chrono/particlefactory/ChParticleRemover.h"
+#include "chrono/assets/ChTexture.h"
 
 #include "chrono_irrlicht/ChVisualSystemIrrlicht.h"
 
-// Use the namespaces of Chrono
+// Use the main namespace of Chrono, and other chrono namespaces
 using namespace chrono;
+using namespace chrono::particlefactory;
 using namespace chrono::irrlicht;
-
-// Use the main namespaces of Irrlicht
-using namespace irr;
-
-void create_some_falling_items(ChSystemNSC& system) {
-    // box data
-    double xsize = 0.5;
-    double zsize = 0.5;
-    double height = 0.5;
-    double thick = 0.1;
-
-    // Create the SPH fluid
-    auto myfluid = chrono_types::make_shared<ChMatterSPH>();
-
-    // Use the FillBox easy way to create the set of SPH particles
-    myfluid->FillBox(ChVector<>(xsize - 0.2, height, zsize),                       // size of box
-                     xsize / 16.0,                                                 // resolution step
-                     1000,                                                         // initial density
-                     ChCoordsys<>(ChVector<>(0.1, height * 0.5 + 0.0, 0), QUNIT),  // position & rotation of box
-                     true,  // do a centered cubic lattice initial arrangement
-                     1.5,   // set the kernel radius (as multiples of step)
-                     0.3);  // the randomness to avoid too regular initial lattice
-
-    // Set some material properties of the SPH fluid
-    myfluid->GetMaterial().Set_viscosity(0.5);
-    myfluid->GetMaterial().Set_pressure_stiffness(300);
-
-    // Add the SPH fluid matter to the system
-    myfluid->SetCollide(true);
-    system.Add(myfluid);
-
-    GetLog() << "Added " << myfluid->GetNnodes() << " SPH particles \n\n";
-
-    // Create the five walls of the rectangular container.
-    auto wall_mat_vis = chrono_types::make_shared<ChVisualMaterial>();
-    wall_mat_vis->SetKdTexture(GetChronoDataFile("textures/blue.png"));
-
-    auto wall_mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
-    wall_mat->SetFriction(0.0f);
-
-    auto wall1 = chrono_types::make_shared<ChBodyEasyBox>(xsize + 2 * thick, thick, zsize + 2 * thick, 1.0, true, true,
-                                                          wall_mat);
-    wall1->SetPos(ChVector<>(0, -thick * 0.5, 0));
-    wall1->SetBodyFixed(true);
-    wall1->SetMass(100);
-    wall1->GetVisualShape(0)->SetMaterial(0, wall_mat_vis);
-    system.Add(wall1);
-
-    auto wall2 = chrono_types::make_shared<ChBodyEasyBox>(thick, height, zsize + 2 * thick, 1.0, true, true, wall_mat);
-    wall2->SetPos(ChVector<>(-xsize * 0.5 - thick * 0.5, height * 0.5, 0));
-    wall2->SetBodyFixed(true);
-    wall2->SetMass(100);
-    wall2->GetVisualShape(0)->SetMaterial(0, wall_mat_vis);
-    system.Add(wall2);
-
-    auto wall3 = chrono_types::make_shared<ChBodyEasyBox>(thick, height, zsize + 2 * thick, 1.0, true, true, wall_mat);
-    wall3->SetPos(ChVector<>(xsize * 0.5 + thick * 0.5, height * 0.5, 0));
-    wall3->SetBodyFixed(true);
-    wall3->SetMass(100);
-    wall3->GetVisualShape(0)->SetMaterial(0, wall_mat_vis);
-    system.Add(wall3);
-
-    auto wall4 = chrono_types::make_shared<ChBodyEasyBox>(xsize + 2 * thick, height, thick, 1.0, true, true, wall_mat);
-    wall4->SetPos(ChVector<>(0, height * 0.5, -zsize * 0.5 - thick * 0.5));
-    wall4->SetBodyFixed(true);
-    wall4->SetMass(100);
-    wall4->GetVisualShape(0)->SetMaterial(0, wall_mat_vis);
-    system.Add(wall4);
-
-    double opening = 0.2;
-    auto wall5 = chrono_types::make_shared<ChBodyEasyBox>(xsize + 2 * thick, height, thick, 1.0, true, true, wall_mat);
-    wall5->SetPos(ChVector<>(opening, height * 0.5, zsize * 0.5 + thick * 0.5));
-    wall5->SetBodyFixed(true);
-    wall5->SetMass(100);
-    wall5->GetVisualShape(0)->SetMaterial(0, wall_mat_vis);
-    system.Add(wall5);
-
-    // Create the floor.
-    auto floor = chrono_types::make_shared<ChBodyEasyBox>(2, 0.1, 2, 1.0, true, true, wall_mat);
-    floor->SetPos(ChVector<>(0, -0.5, 0));
-    floor->SetBodyFixed(true);
-    floor->SetMass(100);
-    system.Add(floor);
-
-    // Create floating balls.
-    auto ball_mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
-    ball_mat->SetFriction(0.0f);
-
-    for (int ib = 0; ib < 12; ib++) {
-        auto ball = chrono_types::make_shared<ChBodyEasySphere>(0.02 + ChRandom() * 0.02, 100, true, true, ball_mat);
-        ball->SetPos(ChVector<>(ChRandom() * 0.3 - 0.15, 0.2, ChRandom() * 0.3 - 0.15));
-        ball->GetVisualShape(0)->SetTexture(GetChronoDataFile("textures/bluewhite.png"));
-        system.Add(ball);
-    }
-}
 
 int main(int argc, char* argv[]) {
     GetLog() << "Copyright (c) 2017 projectchrono.org\nChrono version: " << CHRONO_VERSION << "\n\n";
 
-    // Create a ChronoENGINE physical system
+    // Create a Chrono physical system
     ChSystemNSC sys;
 
-    // Create all the rigid bodies.
-    collision::ChCollisionModel::SetDefaultSuggestedEnvelope(0.003);
-    collision::ChCollisionModel::SetDefaultSuggestedMargin(0.003);
-
-    create_some_falling_items(sys);
-
-    // Create the Irrlicht visualization sys
+    // Create the Irrlicht visualization system
     auto vis = chrono_types::make_shared<ChVisualSystemIrrlicht>();
-    vis->AttachSystem(&sys);
     vis->SetWindowSize(800, 600);
-    vis->SetWindowTitle("SPH fluid");
+    vis->SetWindowTitle("Particle emitter");
     vis->Initialize();
     vis->AddLogo();
     vis->AddSkyBox();
-    vis->AddCamera(ChVector<>(0, 1, -1));
     vis->AddTypicalLights();
+    vis->AddCamera(ChVector<>(5, 7, -10));
 
-    // IMPORTANT!
-    // This takes care of the interaction between the particles of the SPH material
-    auto my_sph_proximity = chrono_types::make_shared<ChProximityContainerSPH>();
-    sys.Add(my_sph_proximity);
+    // Create the floor body
+    auto floor_mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
+    auto floorBody = chrono_types::make_shared<ChBodyEasyBox>(20, 1, 20, 1000, true, true, floor_mat);
+    floorBody->SetPos(ChVector<>(0, -5, 0));
+    floorBody->SetBodyFixed(true);
+    floorBody->GetVisualShape(0)->SetTexture(GetChronoDataFile("textures/concrete.jpg"));
+    sys.Add(floorBody);
+
+    // Create an emitter:
+    ChParticleEmitter emitter;
+
+    // Ok, that object will take care of generating particle flows for you.
+    // It accepts a lot of settings, for creating many different types of particle
+    // flows, like fountains, outlets of various shapes etc.
+
+    // Set the flow rate [particles/s]:
+    emitter.ParticlesPerSecond() = 20;
+
+    // Alternative: flow defined by mass, [kg/s]:
+    emitter.SetFlowControlMode(ChParticleEmitter::FLOW_MASSPERSECOND);
+    emitter.MassPerSecond() = 1000;
+
+    // Optional: limit the total n. of particles that can be generated
+    emitter.SetUseParticleReservoir(true);
+    emitter.ParticleReservoirAmount() = 200;
+
+    // Optional: limit the total mass that can be generated
+    emitter.SetUseMassReservoir(true);
+    emitter.MassReservoirAmount() = 5000;
+
+    // Our ChParticleEmitter object, among the main settings, it requires
+    // that you give him four 'randomizer' objects: one is in charge of
+    // generating random shapes, one is in charge of generating
+    // random positions, one for random alignments, and one for random velocities.
+    // In the following we need to instance such objects. (There are many ready-to-use
+    // randomizer objects already available in chrono, but note that you could also
+    // inherit your own class from these randomizers if the choice is not enough).
+
+    // ---Initialize the randomizer for positions
+    auto emitter_positions = chrono_types::make_shared<ChRandomParticlePositionRectangleOutlet>();
+    emitter_positions->Outlet() =
+        ChCoordsys<>(ChVector<>(0, 3, 0), Q_from_AngAxis(CH_C_PI_2, VECT_X));  // center and alignment of the outlet
+    emitter_positions->OutletWidth() = 3.0;
+    emitter_positions->OutletHeight() = 4.5;
+
+    emitter.SetParticlePositioner(emitter_positions);
+
+    // ---Initialize the randomizer for alignments
+    auto emitter_rotations = chrono_types::make_shared<ChRandomParticleAlignmentUniform>();
+
+    emitter.SetParticleAligner(emitter_rotations);
+
+    // ---Initialize the randomizer for velocities, with statistical distribution
+    auto mvelo = chrono_types::make_shared<ChRandomParticleVelocityConstantDirection>();
+    mvelo->SetDirection(-VECT_Y);
+    mvelo->SetModulusDistribution(0.0);
+
+    emitter.SetParticleVelocity(mvelo);
+
+    // ---Initialize the randomizer for creations, with statistical distribution
+
+    // Create a ChRandomShapeCreator object (ex. here for box particles)
+    auto mcreator_boxes = chrono_types::make_shared<ChRandomShapeCreatorBoxes>();
+    mcreator_boxes->SetXsizeDistribution(
+        chrono_types::make_shared<ChZhangDistribution>(0.5, 0.2));  // Zhang parameters: average val, min val.
+    mcreator_boxes->SetSizeRatioZDistribution(chrono_types::make_shared<ChMinMaxDistribution>(0.2, 1.0));
+    mcreator_boxes->SetSizeRatioYZDistribution(chrono_types::make_shared<ChMinMaxDistribution>(0.4, 1.0));
+    mcreator_boxes->SetDensityDistribution(chrono_types::make_shared<ChConstantDistribution>(1000));
+
+    // Optional: define a callback to be exectuted at each creation of a box particle:
+    class MyCreator_boxes : public ChRandomShapeCreator::AddBodyCallback {
+        // Here do custom stuff on the just-created particle:
+      public:
+        virtual void OnAddBody(std::shared_ptr<ChBody> mbody,
+                               ChCoordsys<> mcoords,
+                               ChRandomShapeCreator& mcreator) override {
+            mbody->GetVisualShape(0)->SetColor(ChColor(0.0f, 1.0f, (float)ChRandom()));
+        }
+    };
+    auto callback_boxes = chrono_types::make_shared<MyCreator_boxes>();
+    mcreator_boxes->RegisterAddBodyCallback(callback_boxes);
+
+    // Finally, tell to the emitter that it must use the 'mixer' above:
+    emitter.SetParticleCreator(mcreator_boxes);
+
+    // --- Optional: what to do by default on ALL newly created particles?
+    //     A callback executed at each particle creation can be attached to the emitter.
+    //     For example, we need that new particles will be bound to Irrlicht visualization:
+
+    // a- define a class that implement your custom OnAddBody method...
+    class MyCreatorForAll : public ChRandomShapeCreator::AddBodyCallback {
+      public:
+        virtual void OnAddBody(std::shared_ptr<ChBody> mbody,
+                               ChCoordsys<> mcoords,
+                               ChRandomShapeCreator& mcreator) override {
+            // Enable Irrlicht visualization for all particles
+            vis->BindItem(mbody);
+
+            // Other stuff, ex. disable gyroscopic forces for increased integrator stabilty
+            mbody->SetNoGyroTorque(true);
+        }
+        ChVisualSystemIrrlicht* vis;
+    };
+    // b- create the callback object...
+    auto mcreation_callback = chrono_types::make_shared<MyCreatorForAll>();
+    // c- set callback own data that he might need...
+    mcreation_callback->vis = vis.get();
+    // d- attach the callback to the emitter!
+    emitter.RegisterAddBodyCallback(mcreation_callback);
+
+    // Bind all existing visual shapes to the visualization system
+    vis->AttachSystem(&sys);
 
     // Modify some setting of the physical system for the simulation, if you want
-
-    sys.SetSolverMaxIterations(6);  // lower the solver iters, no needed here
+    sys.SetSolverType(ChSolver::Type::PSOR);
+    sys.SetSolverMaxIterations(40);
 
     // Simulation loop
-    double timestep = 0.0025;
+    double timestep = 0.01;
     while (vis->Run()) {
         vis->BeginScene();
         vis->Render();
+        vis->EndScene();
 
-        for (auto ph : sys.Get_otherphysicslist()) {
-            if (ChMatterSPH* myfluid = dynamic_cast<ChMatterSPH*>(ph.get())) {
-                for (unsigned int ip = 0; ip < myfluid->GetNnodes(); ip++) {
-                    auto mnode = std::dynamic_pointer_cast<ChNodeSPH>(myfluid->GetNode(ip));
-
-                    ChVector<> mv = mnode->GetPos();
-                    ////float rad = (float)mnode->GetKernelRadius();
-                    core::vector3df mpos((irr::f32)mv.x(), (irr::f32)mv.y(), (irr::f32)mv.z());
-                    core::position2d<s32> spos =
-                        vis->GetSceneManager()->getSceneCollisionManager()->getScreenCoordinatesFrom3DPosition(mpos);
-                    vis->GetVideoDriver()->draw2DRectangle(
-                        video::SColor(100, 200, 200, 230),
-                        core::rect<s32>(spos.X - 2, spos.Y - 2, spos.X + 2, spos.Y + 2));
-
-                    /*
-                    double strain_scale =1;
-                    tools::drawSegment(vis.get(), mnode->GetPos(),
-                    mnode->GetPos()+(VECT_X*mnode->p_strain.XX()* strain_scale), video::SColor(255,255,0,0),false);
-                    tools::drawSegment(vis.get(), mnode->GetPos(),
-                    mnode->GetPos()+(VECT_Y*mnode->p_strain.YY()* strain_scale), video::SColor(255,0,255,0),false);
-                    tools::drawSegment(vis.get(), mnode->GetPos(),
-                    mnode->GetPos()+(VECT_Z*mnode->p_strain.ZZ()* strain_scale), video::SColor(255,0,0,255),false);
-                    */
-
-                    /*
-                    double stress_scale =0.008;
-                    tools::drawSegment(vis.get(), mnode->GetPos(),
-                    mnode->GetPos()+(VECT_X*mnode->e_stress.XX()* stress_scale), video::SColor(100,255,0,0),false);
-                    tools::drawSegment(vis.get(), mnode->GetPos(),
-                    mnode->GetPos()+(VECT_Y*mnode->e_stress.YY()* stress_scale), video::SColor(100,0,255,0),false);
-                    tools::drawSegment(vis.get(), mnode->GetPos(),
-                    mnode->GetPos()+(VECT_Z*mnode->e_stress.ZZ()* stress_scale), video::SColor(100,0,0,255),false);
-                    */
-
-                    // tools::drawSegment(vis.get(), mnode->GetPos(),
-                    // mnode->GetPos()+(mnode->UserForce * 0.1), video::SColor(100,0,0,0),false);
-                }
-            }
-        }
+        // Continuosly create particle flow:
+        emitter.EmitParticles(sys, timestep);
 
         sys.DoStepDynamics(timestep);
-        vis->EndScene();
     }
 
     return 0;
