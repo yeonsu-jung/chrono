@@ -8,8 +8,8 @@
 # Optionally enable building the various programs
 #-----------------------------------------------------------------------------
 
-option(BUILD_YJUNG "Yeonsu Jung's addition" ON)
-option(BUILD_DEMOS "Build demo programs" OFF)
+option(BUILD_YJUNG "Yeonsu Jung's addition" OFF)
+option(BUILD_DEMOS "Build demo programs" ON)
 option(BUILD_BENCHMARKING "Build benchmark tests" OFF)
 option(BUILD_DEMOS_MBS "Build demo programs for MBS module" OFF)
 

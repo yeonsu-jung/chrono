@@ -42,7 +42,7 @@ if(BUILD_DEMOS_BASE)
 endif()
 
 if(ENABLE_MODULE_IRRLICHT OR ENABLE_MODULE_VSG)
-	option(BUILD_DEMOS_MBS "Build demo programs for MBS module" TRUE)
+	option(BUILD_DEMOS_MBS "Build demo programs for MBS module" ON)
 	mark_as_advanced(FORCE BUILD_DEMOS_MBS)
 	if(BUILD_DEMOS_MBS)
 	  add_subdirectory(mbs)
