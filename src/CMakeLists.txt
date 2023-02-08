@@ -11,7 +11,9 @@
 option(BUILD_YJUNG "Yeonsu Jung's addition" OFF)
 option(BUILD_DEMOS "Build demo programs" ON)
 option(BUILD_BENCHMARKING "Build benchmark tests" OFF)
-option(BUILD_DEMOS_MBS "Build demo programs for MBS module" OFF)
+option(ENABLE_MODULE_IRRLICHT "" ON)
+option(BUILD_DEMOS_MBS "Build demo programs for MBS module" ON)
+
 
 #-----------------------------------------------------------------------------
 # Search prefixes specified by <PackageName>_ROOT
@@ -561,8 +563,8 @@ include_directories(${THRUST_INCLUDE_DIR})
 
 #------------------------------------------------------------
 # Build submodules
-#------------------------------------------------------------
 
+#------------------------------------------------------------
 if(BUILD_TESTING)
   message(STATUS "Build Google test framework")
 
