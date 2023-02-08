@@ -1,12 +1,12 @@
 #--------------------------------------------------------------
 # List of all Irrlicht demos
 
-set(DEMOS
-  demo_IRR_decomposition
-  demo_IRR_assets
-  demo_IRR_paths
-  demo_IRR_visualize_collision
-)
+# set(DEMOS
+#   demo_IRR_decomposition
+#   demo_IRR_assets
+#   demo_IRR_paths
+#   demo_IRR_visualize_collision
+# )
 
 if(THRUST_FOUND)
   set(DEMOS ${DEMOS}
