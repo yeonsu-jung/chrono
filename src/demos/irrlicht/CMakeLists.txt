@@ -1,12 +1,12 @@
 #--------------------------------------------------------------
 # List of all Irrlicht demos
 
-set(DEMOS
-  demo_IRR_decomposition
-  demo_IRR_assets
-  demo_IRR_paths
-  demo_IRR_visualize_collision
-)
+# set(DEMOS
+#   demo_IRR_decomposition
+#   demo_IRR_assets
+#   demo_IRR_paths
+#   demo_IRR_visualize_collision
+# )
 
 if(THRUST_FOUND)
   set(DEMOS ${DEMOS}
@@ -42,7 +42,7 @@ foreach(PROGRAM ${DEMOS})
     COMPILE_FLAGS "${CH_CXX_FLAGS} ${CH_IRRLICHT_CXX_FLAGS}"
     LINK_FLAGS "${CH_LINKERFLAG_EXE}")
   if(APPLE)
-    set_target_properties(${PROGRAM} PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${MACOSX_BUNDLE_INFO_PLIST})
+    set_target_properties(${PROGRAM} PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${MACOSX_BUNDLE_INFO_PLIST}")
   endif()
   set_property(TARGET ${PROGRAM} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:${PROGRAM}>")
   target_link_libraries(${PROGRAM} ChronoEngine ChronoEngine_irrlicht)    

@@ -767,7 +767,6 @@ std::shared_ptr<ChBody> CreateCylindricalContainerFromBoxes(ChSystem* system,
     body->SetIdentifier(id);
     // body->SetMass(1);
     body->SetPos(pos);
-    body->SetRot(rot);
     body->SetCollide(collide);
     body->SetBodyFixed(true);
 
@@ -789,7 +788,8 @@ std::shared_ptr<ChBody> CreateCylindricalContainerFromBoxes(ChSystem* system,
 
         // this is here to make half the cylinder invisible.
         bool m_visualization = true;
-        if ((ang * i > CH_C_PI && ang * i < 3.0 * CH_C_PI / 2.0) && partialVisualization) {
+        // if ((ang * i > CH_C_PI/4.0 && ang * i < 1.0 * CH_C_PI / 2.0) && partialVisualization) {
+        if ((ang * i < CH_C_PI) && partialVisualization) {
             m_visualization = false;
         }
         utils::AddBoxGeometry(body.get(), mat, p_boxSize, p_pos, p_quat, m_visualization);
@@ -816,6 +816,7 @@ std::shared_ptr<ChBody> CreateCylindricalContainerFromBoxes(ChSystem* system,
 
     body->GetCollisionModel()->SetEnvelope(0.2 * hthick);
     body->GetCollisionModel()->BuildModel();
+    body->SetRot(rot);
 
     system->AddBody(body);
     return body;
