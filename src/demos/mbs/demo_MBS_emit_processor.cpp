@@ -118,7 +118,7 @@ int main(int argc, char* argv[]) {
     mcreator_plastic->SetDiameterDistribution(
         chrono_types::make_shared<ChConstantDistribution>(0.5));
     mcreator_plastic->SetLengthFactorDistribution(
-        chrono_types::make_shared<ChConstantDistribution>(125));    
+        chrono_types::make_shared<ChConstantDistribution>(200));    
     mcreator_plastic->SetDensityDistribution(
         chrono_types::make_shared<ChConstantDistribution>(8000));
 
