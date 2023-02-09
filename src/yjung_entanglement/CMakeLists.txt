@@ -2,57 +2,9 @@
 # List of all MBS demos
 
 # Add demos that can work with either Irrlicht or VSG
-set(DEMOS
-  demo_MBS_entanglement
-  demo_MBS_entanglement2
+set(TARGETS
+  yjung_entanglement
 )
-
-# Add demos that can only work with Irrlicht
-# if(ENABLE_MODULE_IRRLICHT)
-#     set(DEMOS ${DEMOS}
-#       demo_MBS_cohesion
-#       demo_MBS_conveyor
-#       demo_MBS_feeder
-#       demo_MBS_crank
-#       demo_MBS_forklift
-#       demo_MBS_fourbar
-#       demo_MBS_gears
-#       demo_MBS_mecanum
-#       demo_MBS_pendulum
-#       demo_MBS_sph
-#       demo_MBS_suspension
-#       demo_MBS_tire
-#       demo_MBS_tracks
-#       demo_MBS_convergence
-#       demo_MBS_soilbin
-#       demo_MBS_collision_trimesh
-#       demo_MBS_collision_2d
-#       demo_MBS_emitter
-#       demo_MBS_emit_cluster
-#       demo_MBS_emit_processor
-#       demo_MBS_rev_sph
-#       demo_MBS_rev_trans
-#       demo_MBS_rev_limits
-#       demo_MBS_rot_spring
-#       demo_MBS_ujoint
-#       demo_MBS_plane_plane
-#       demo_MBS_link_bushing
-#       demo_MBS_prismatic_limits
-#       demo_MBS_prismatic_force
-#       demo_MBS_motors
-#       demo_MBS_OpenSim_parser
-#       demo_MBS_report_collisions
-#       demo_MBS_Adams_parser
-#       demo_MBS_imposed_motion
-#       demo_MBS_custom_contact
-#     )
-
-#     if(THRUST_FOUND)
-#       set(DEMOS ${DEMOS}
-#         demo_MBS_collision_object
-#       )
-#     endif()
-# endif()
 
 #--------------------------------------------------------------
 
@@ -88,9 +40,9 @@ endif()
 
 # Add executables
 
-message(STATUS "Demo programs for MBS module...")
+message(STATUS "YJung's entanglement code...")
 
-foreach(PROGRAM ${DEMOS})
+foreach(PROGRAM ${TARGETS})
   message(STATUS "...add ${PROGRAM}")
 
   add_executable(${PROGRAM}  "${PROGRAM}.cpp")
@@ -98,7 +50,7 @@ foreach(PROGRAM ${DEMOS})
 
   set_target_properties(${PROGRAM} PROPERTIES FOLDER demos COMPILE_FLAGS "${COMPILER_FLAGS}" LINK_FLAGS "${LINKER_FLAGS}")
   if(APPLE)
-    set_target_properties(${PROGRAM} PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${MACOSX_BUNDLE_INFO_PLIST})
+    set_target_properties(${PROGRAM} PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${MACOSX_BUNDLE_INFO_PLIST}")
   endif()
   set_property(TARGET ${PROGRAM} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:${PROGRAM}>")
   target_link_libraries(${PROGRAM} ${LIBS})  

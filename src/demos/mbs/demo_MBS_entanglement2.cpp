@@ -33,13 +33,20 @@
 
 #include "chrono_irrlicht/ChVisualSystemIrrlicht.h"
 
+#include <fstream>
+#include <iostream>
+#include <string>
+// #include <vector>
+#include <sstream>
+
+// using namespace std; % why not allowed
+
 // Use the namespace of Chrono
 using namespace chrono;
 using namespace chrono::geometry;
 using namespace chrono::particlefactory;
 using namespace chrono::irrlicht;
-using namespace chrono::postprocess;
-
+// using namespace chrono::postprocess;
 
 int main(int argc, char* argv[]) {
     GetLog() << "Copyright (c) 2017 projectchrono.org\nChrono version: " << CHRONO_VERSION << "\n\n";
@@ -48,7 +55,7 @@ int main(int argc, char* argv[]) {
     ChSystemNSC sys;
     // ChSystemSMC sys;
     // GetLog() << sys.GetContactMethod() << "\n\n";
-    
+
     const ChVector<> camera_position(15, 0, 0);
     const double container_width = 10;
     const double container_thickness = 0.1;
@@ -56,7 +63,7 @@ int main(int argc, char* argv[]) {
 
     const double rod_alpha = 38;
     const double rod_length = 10;
-    const double rod_diameter = rod_length/rod_alpha;
+    const double rod_diameter = rod_length / rod_alpha;
 
     float Y_c = 2.0e6f;
     float mu_c = 0.3f;
@@ -69,91 +76,125 @@ int main(int argc, char* argv[]) {
     double hDimZ = 7.5e-1;       // height in z direction
     double hThickness = 0.5e-1;  // wall thickness
 
-        // Create an exporter to POVray
-    ChPovRay pov_exporter = ChPovRay(&sys);
+    // Create the Irrlicht visualization system
+    auto vis = chrono_types::make_shared<ChVisualSystemIrrlicht>();
+    vis->SetWindowSize(800, 600);
+    vis->SetWindowTitle("Entanglement");
+    vis->Initialize();
+    vis->AddLogo();
+    vis->AddSkyBox();
+    vis->AddCamera(camera_position);
+    // vis->AddTypicalLights();
+    vis->AddLight(ChVector<>(60, 160, +60), 300, ChColor(0.7f, 0.7f, 0.7f));
 
-    // Important: set the path to the template:
-    pov_exporter.SetTemplateFile(GetChronoDataFile("POVRay_chrono_template.pov"));
-
-    // Set the path where it will save all .pov, .ini, .asset and .dat files, a directory will be created if not
-    // existing
-    pov_exporter.SetBasePath(GetChronoOutputPath() + "POVRAY_1");
-
-    // Optional: change the default naming of the generated files:
-    // pov_exporter.SetOutputScriptFile("rendering_frames.pov");
-    // pov_exporter.SetOutputDataFilebase("my_state");
-    // pov_exporter.SetPictureFilebase("picture");
-
-    // --Optional: modify default light
-    pov_exporter.SetLight(ChVector<>(-3, 4, 2), ChColor(0.15f, 0.15f, 0.12f), false);
-
-    // --Optional: add further POV commands, for example in this case:
-    //     create an area light for soft shadows
-    //     create a Grid object; Grid() parameters: step, linewidth, linecolor, planecolor
-    //   Remember to use \ at the end of each line for a multiple-line string.
-    pov_exporter.SetCustomPOVcommandsScript(
-        " \
-	light_source {   \
-      <2, 10, -3>  \
-	  color rgb<1.2,1.2,1.2> \
-      area_light <4, 0, 0>, <0, 0, 4>, 8, 8 \
-      adaptive 1 \
-      jitter\
-    } \
-	object{ Grid(1,0.02, rgb<0.7,0.8,0.8>, rgbt<1,1,1,1>) rotate <0, 0, 90>  } \
-    ");
-
-    
     auto mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
     mat->SetFriction(0.4f);
-    
+    mat->SetRollingFriction(1e-3);
+
     // Create a wall
     auto mat_c = chrono_types::make_shared<ChMaterialSurfaceNSC>();
-    mat_c->SetFriction(mu_c);
-    
-    // utils::CreateBoxContainer(sys, 0, mat, hdim, 0.2, Vector(0, 0, -hdim.z), Q_from_AngAxis(0, VECT_Y), true, false,
-    //                           true, false);
+    mat_c->SetFriction(0.4f);
+
     ChVector<> hdim(6, 6, 5);
-    // std::shared_ptr<ChBody> body(system->NewBody());
-
     auto wall = chrono_types::make_shared<ChBody>();
-
-    wall = utils::CreateCylindricalContainerFromBoxes(&sys,binId,mat_c,hdim,container_thickness,25,ChVector<>(0,0,-2*container_thickness),Q_from_AngAxis(-CH_C_PI/2,VECT_X),true,false,false,false,true);        
-    wall->GetVisualShape(0)->SetColor(ChColor(0.1f,0.1f,0.1f));
+    wall = utils::CreateCylindricalContainerFromBoxes(
+        &sys, binId, mat_c, hdim, container_thickness, 25, ChVector<>(0, 0, 2 * container_thickness),
+        Q_from_AngAxis(-CH_C_PI / 2, VECT_X), true, false, false, false, true);
+    wall->SetPos(ChVector<> (0,-1,0));
+    wall->GetVisualShape(0)->SetColor(ChColor(0.1f, 0.1f, 0.1f));
 
     // Create a body (for a test)
-    auto pendulum = chrono_types::make_shared<ChBodyEasyCylinder>(0.1, 2, 1000, true, true, mat);
-    pendulum->SetPos(ChVector<>(0, 5, 0));
-    pendulum->SetRot(Q_from_AngAxis(0.1,VECT_Y));
+    // auto rod = chrono_types::make_shared<ChBodyEasyCylinder>(0.1, 2, 8000, true, true, mat);
+    // rod->SetPos(ChVector<>(0, 5, 0));
+    // rod->SetRot(Q_from_AngAxis(0.1, VECT_Y));
+    // rod->SetEvalContactCn(true);
+    // rod->SetEvalContactCt(true);
+    // rod->SetEvalContactKf(true);
+    // rod->SetEvalContactSf(true);
+    // sys.Add(rod);
 
-    pendulum->SetEvalContactCn(true);
-    pendulum->SetEvalContactCt(true);
-    pendulum->SetEvalContactKf(true);
-    pendulum->SetEvalContactSf(true);
-    sys.Add(pendulum);
+    std::ifstream myFile;
+    myFile.open(
+        "/Users/yeonsu/Documents/github/rod-pile-elastica/0/"
+        "SmallRandomRods_[R1.2_H1.5_L1_A0.01_N1289_Date2023-02-08_12-56-38].csv");
+    int N = 0;
+    while (myFile.good()) {
+        std::string line;
+        getline(myFile, line, '\n');
+        N = N + 1;
+    }
+    myFile.close();
 
-    pov_exporter.AddAll();
-    pov_exporter.ExportScript();
+    myFile.open(
+        "/Users/yeonsu/Documents/github/rod-pile-elastica/0/"
+        "SmallRandomRods_[R1.2_H1.5_L1_A0.01_N1289_Date2023-02-08_12-56-38].csv");
+    double v[6];
+    
+    int iter = 0;
+    while (myFile.good()) {
+        std::string line;
+        getline(myFile, line, '\n');
+        std::stringstream ss(line);
+
+        // if (line.empty() || iter > 10) {
+        if (iter > 200) {
+            break;
+        }
+        iter += 1;
+
+        for (int i = 0; i < 6; i++) {
+            // while (ss.good()) {
+            std::string substr;
+            getline(ss, substr, ',');
+            v[i] = std::stod(substr);
+        }
+
+        auto rod = chrono_types::make_shared<ChBodyEasyCylinder>(0.005, 1, 8000, true, true, mat);
+        rod->SetPos(ChVector<>((v[0] + v[3]) / 2, (v[1] + v[4]) / 2, (v[2] + v[5]) / 2));
+
+        const ChVector<> v1(v[0], v[1], v[2]);
+        const ChVector<> v2(v[3], v[4], v[5]);
+
+        rod->SetRot(Q_from_Vect_to_Vect(v1, v2));
+        rod->SetEvalContactCn(true);
+        rod->SetEvalContactCt(true);
+        rod->SetEvalContactKf(true);
+        rod->SetEvalContactSf(true);
+        sys.Add(rod);
+
+        // GetLog() << v1[0] << '\n';
+    }
+    myFile.close();
 
     // Simulation loop
     double timestep = 0.02;
-    double time_settle = 1;
+    double time_settle = 50;
     double chrono_time = 0;
-    ChRealtimeStepTimer realtime_timer;    
-    
-    while (chrono_time < time_settle) {
+    ChRealtimeStepTimer realtime_timer;
+
+    vis->AttachSystem(&sys);
+    // This means that contactforces will be shown in Irrlicht application
+    vis->SetSymbolScale(0.2);
+    vis->EnableContactDrawing(ContactsDrawMode::CONTACT_NORMALS);
+
+    while (vis->Run() && chrono_time < time_settle) {
+        vis->BeginScene();
+        vis->Render();
+        vis->EndScene();
+
         chrono_time = chrono_time + timestep;
-        // GetLog() << "Acc force:" << pendulum->Get_accumulated_force() << "\n";
-        // GetLog() << "Acc force:" << pendulum->GetAppliedForce() << "\n";
-                
+        // GetLog() << "Acc force:" << rod->Get_accumulated_force() << "\n";
+        // GetLog() << "Acc force:" << rod->GetAppliedForce() << "\n";
+
         sys.DoStepDynamics(timestep);
         realtime_timer.Spin(timestep);
-        
+
         GetLog() << "time= " << sys.GetChTime() << "\n";
+        // GetLog() << "position= " << rod->GetPos() << "\n";
         // 2) Create the incremental nnnn.dat and nnnn.pov files that will be load
         //    by the pov .ini script in POV-Ray (do this at each simulation timestep)
-        pov_exporter.ExportData();
     }
 
     return 0;
 }
+

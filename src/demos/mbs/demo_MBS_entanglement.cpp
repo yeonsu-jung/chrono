@@ -12,70 +12,107 @@
 // Authors: Alessandro Tasora
 // =============================================================================
 //
-//   Demo code about
-//     - using the ChParticleEmitter to create flows
-//     - use a ChParticleRemover to remove particles outside a volume
-//     - use a ChParticleProcessor to compute mass flow etc.
-//     - use Irrlicht to display objects.
+// Demo code about using paths for defining trajectories
 //
 // =============================================================================
 
+#include "chrono/physics/ChBodyEasy.h"
+#include "chrono/physics/ChLinkMotorRotationSpeed.h"
+#include "chrono/physics/ChLinkTrajectory.h"
 #include "chrono/physics/ChSystemNSC.h"
+#include "chrono/physics/ChMaterialSurface.h"
 #include "chrono/particlefactory/ChParticleEmitter.h"
 #include "chrono/particlefactory/ChParticleRemover.h"
-#include "chrono/assets/ChTexture.h"
-#include "chrono/physics/ChLoadsBody.h"
 
 
+
+// #include "chrono/physics/ChSystemSMC.h"
+#include "chrono/utils/ChUtilsCreators.h"
+
+#include "chrono/core/ChRealtimeStep.h"
 #include "chrono_irrlicht/ChVisualSystemIrrlicht.h"
 
-// Use the main namespace of Chrono, and other chrono namespaces
+// Use the namespace of Chrono
 using namespace chrono;
+using namespace chrono::geometry;
 using namespace chrono::particlefactory;
 using namespace chrono::irrlicht;
 
 int main(int argc, char* argv[]) {
     GetLog() << "Copyright (c) 2017 projectchrono.org\nChrono version: " << CHRONO_VERSION << "\n\n";
 
-    // Create a Chrono system
+    // Create a Chrono::Engine physical system
     ChSystemNSC sys;
+    // ChSystemSMC sys;
+    // GetLog() << sys.GetContactMethod() << "\n\n";
+        
+    const ChVector<> camera_position(15, 0, 0);
+    const double container_width = 10;
+    const double container_thickness = 0.1;
+    const double container_height = 10;
+
+    const double rod_alpha = 38;
+    const double rod_length = 10;
+    const double rod_diameter = rod_length/rod_alpha;
+
+    float Y_c = 2.0e6f;
+    float mu_c = 0.3f;
+    float cr_c = 0.1f;
+
+
+    // Parameters for the containing bin
+    int binId = -200;
+    double hDimX = 4e-1;         // length in x direction
+    double hDimY = 4e-1;         // depth in y direction
+    double hDimZ = 7.5e-1;       // height in z direction
+    double hThickness = 0.5e-1;  // wall thickness
+
+    // visualization setup
+    
 
     // Create the Irrlicht visualization system
-    auto vis = chrono_types::make_shared<ChVisualSystemIrrlicht>();
+    auto vis = chrono_types::make_shared<ChVisualSystemIrrlicht>();    
     vis->SetWindowSize(800, 600);
-    vis->SetWindowTitle("Particle emitter, remover, processor");
+    vis->SetWindowTitle("Entanglement");
     vis->Initialize();
     vis->AddLogo();
     vis->AddSkyBox();
-    vis->AddTypicalLights();
-    // vis->AddCamera(ChVector<>(0, 7, -10));
-    vis->AddCamera(ChVector<>(151, 0, 0));
+    vis->AddCamera(camera_position);
+    // vis->AddTypicalLights();    
+    vis->AddLight(ChVector<>(60, 160, +60), 300, ChColor(0.7f, 0.7f, 0.7f));
 
-    // define material - yjung
     auto mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
     mat->SetFriction(0.4f);
-    // mat->SetSFriction(0.4f);
-    // mat->SetCompliance(3.2*1e4f);
-    // mat->SetComplianceT(3.2*1e4f);
-    mat->SetDampingF(1e4f);
+    // mat->SetCompliance(3.2e8f);
+    // mat->SetComplianceT(3.2e8f);
+    // mat->SetDampingF(1e4f);    
 
-    // Create the floor:
-    auto floor_mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
+    // Create a wall
+    auto mat_c = chrono_types::make_shared<ChMaterialSurfaceNSC>();
+    mat_c->SetFriction(mu_c);
+    
+    // utils::CreateBoxContainer(sys, 0, mat, hdim, 0.2, Vector(0, 0, -hdim.z), Q_from_AngAxis(0, VECT_Y), true, false,
+    //                           true, false);
+    ChVector<> hdim(6, 6, 5);
+    // std::shared_ptr<ChBody> body(system->NewBody());
 
-    auto floorBody = chrono_types::make_shared<ChBodyEasyBox>(1500, 5, 1500, 1000, true, true, mat);
-    floorBody->SetPos(ChVector<>(0, -5, 0));
-    floorBody->SetBodyFixed(true);
-    floorBody->GetVisualShape(0)->SetTexture(GetChronoDataFile("textures/concrete.jpg"));
+    auto wall = chrono_types::make_shared<ChBody>();
+    wall = utils::CreateCylindricalContainerFromBoxes(&sys,binId,mat_c,hdim,container_thickness,25,ChVector<>(0,0,-2*container_thickness),Q_from_AngAxis(-CH_C_PI/2,VECT_X),true,false,false,false,true);        
+    wall->GetVisualShape(0)->SetColor(ChColor(0.1f,0.1f,0.1f));
 
-    floorBody->SetEvalContactCn(true);
-    floorBody->SetEvalContactCt(true);
-    floorBody->SetEvalContactKf(true);
-    floorBody->SetEvalContactSf(true);
+    // Create a body (for a test)
+    // auto pendulum = chrono_types::make_shared<ChBodyEasyCylinder>(0.1, 2, 1000, true, true, mat);
+    // pendulum->SetPos(ChVector<>(0, 5, 0));
+    // pendulum->SetRot(Q_from_AngAxis(0.1,VECT_Y));
 
-    sys.Add(floorBody);
+    // pendulum->SetEvalContactCn(true);
+    // pendulum->SetEvalContactCt(true);
+    // pendulum->SetEvalContactKf(true);
+    // pendulum->SetEvalContactSf(true);
+    // sys.Add(pendulum);
 
+    // Create emitter
     // Create an emitter:
-
     ChParticleEmitter emitter;
 
     // Ok, that object will take care of generating particle flows for you.
@@ -83,8 +120,7 @@ int main(int argc, char* argv[]) {
     // flows, like fountains, outlets of various shapes etc.
     // For instance, set the flow rate, etc:
 
-    emitter.ParticlesPerSecond() = 1;
-
+    emitter.ParticlesPerSecond() = 100;
     emitter.SetUseParticleReservoir(true);
     emitter.ParticleReservoirAmount() = 5000;
 
@@ -99,9 +135,9 @@ int main(int argc, char* argv[]) {
     // ---Initialize the randomizer for positions
     auto emitter_positions = chrono_types::make_shared<ChRandomParticlePositionRectangleOutlet>();
     emitter_positions->Outlet() =
-        ChCoordsys<>(ChVector<>(0, 150, 0), Q_from_AngAxis(CH_C_PI_2, VECT_X));  // center and alignment of the outlet
-    emitter_positions->OutletWidth() = 5.0;
-    emitter_positions->OutletHeight() = 10.5;
+        ChCoordsys<>(ChVector<>(0, 10, 0), Q_from_AngAxis(CH_C_PI_2, VECT_X));  // center and alignment of the outlet
+    emitter_positions->OutletWidth() = 3.0;
+    emitter_positions->OutletHeight() = 4.5;
     emitter.SetParticlePositioner(emitter_positions);
 
     // ---Initialize the randomizer for alignments
@@ -111,7 +147,7 @@ int main(int argc, char* argv[]) {
     // ---Initialize the randomizer for velocities, with statistical distribution
     auto mvelo = chrono_types::make_shared<ChRandomParticleVelocityConstantDirection>();
     mvelo->SetDirection(-VECT_Y);
-    mvelo->SetModulusDistribution(0.0);    
+    mvelo->SetModulusDistribution(0.0);
     emitter.SetParticleVelocity(mvelo);
 
     // ---Initialize the randomizer for creations, with statistical distribution
@@ -119,40 +155,23 @@ int main(int argc, char* argv[]) {
     // Create a ChRandomShapeCreator object (ex. here for box particles)
     auto mcreator_plastic = chrono_types::make_shared<ChRandomShapeCreatorCylinders>();
     mcreator_plastic->SetDiameterDistribution(
-        chrono_types::make_shared<ChConstantDistribution>(0.5));
+        chrono_types::make_shared<ChConstantDistribution>(0.1));
     mcreator_plastic->SetLengthFactorDistribution(
-        chrono_types::make_shared<ChConstantDistribution>(125));    
+        chrono_types::make_shared<ChConstantDistribution>(20));
     mcreator_plastic->SetDensityDistribution(
         chrono_types::make_shared<ChConstantDistribution>(8000));
-
     mcreator_plastic->SetMaterial(mat);
 
-    // mcreator_plastic->SetXsizeDistribution(
-    //     chrono_types::make_shared<ChZhangDistribution>(0.5, 0.2));  // Zhang parameters: average val, min val.
-    // mcreator_plastic->SetSizeRatioZDistribution(chrono_types::make_shared<ChMinMaxDistribution>(0.2, 1.0));
-    // mcreator_plastic->SetSizeRatioYZDistribution(chrono_types::make_shared<ChMinMaxDistribution>(0.4, 1.0));
-    // mcreator_plastic->SetDensityDistribution(chrono_types::make_shared<ChConstantDistribution>(1000));
-    
-    // auto my_force_a1 = chrono_types::make_shared<ChForce>();
-    // Optional: define a callback to be exectuted at each creation of a box particle:        
+    // Optional: define a callback to be exectuted at each creation of a box particle:
     class MyCreator_plastic : public ChRandomShapeCreator::AddBodyCallback {
         // Here do custom stuff on the just-created particle:
       public:
         virtual void OnAddBody(std::shared_ptr<ChBody> mbody,
                                ChCoordsys<> mcoords,
                                ChRandomShapeCreator& mcreator) override {
-
-            // yjung: add gravity to particles
-            auto mod = chrono_types::make_shared<ChFunction_Const>(1e6);
-            auto force = chrono_types::make_shared<ChForce>();
-            force->SetF_y(mod);
-
-            mbody->GetVisualShape(0)->SetColor(ChColor(0.0f, 1.0f, (float)ChRandom()));
-            mbody->SetEvalContactKf(true);
-            mbody->SetEvalContactSf(true);
-            mbody->SetEvalContactCn(true);
-            mbody->SetEvalContactCt(true);
-            mbody->AddForce(force);
+            mbody->GetVisualShape(0)->SetColor(ChColor(0.0f, 1.0f, (float)ChRandom()));            
+            // mbody->SetEvalContactKf(true);
+            // mbody->SetEvalContactSf(true);
         }
     };
     auto callback_plastic = chrono_types::make_shared<MyCreator_plastic>();
@@ -176,17 +195,10 @@ int main(int argc, char* argv[]) {
 
             // Disable gyroscopic forces for increased integrator stabilty
             mbody->SetNoGyroTorque(true);
-
-            auto mod = chrono_types::make_shared<ChFunction_Const>(-1e4);
-            auto force = chrono_types::make_shared<ChForce>();
-            force->SetF_y(mod);
-                        
-            mbody->GetVisualShape(0)->SetColor(ChColor(0.0f, 1.0f, (float)ChRandom()));
-            mbody->SetEvalContactKf(true);
-            mbody->SetEvalContactSf(true);
             mbody->SetEvalContactCn(true);
             mbody->SetEvalContactCt(true);
-            mbody->AddForce(force);
+            mbody->SetEvalContactKf(true);
+            mbody->SetEvalContactSf(true);
         }
         ChVisualSystemIrrlicht* vis;
     };
@@ -197,58 +209,33 @@ int main(int argc, char* argv[]) {
     mcreation_callback->vis = vis.get();
     // d- attach the callback to the emitter!
     emitter.RegisterAddBodyCallback(mcreation_callback);
-
-    // Create the remover, i.e. an object that takes care
-    // of removing particles that are inside or outside some volume.
-    // The fact that particles are handled with shared pointers means that,
-    // after they are removed from the system, they are also automatically
-    // deleted if no one else is referencing them.
-
-    // ChParticleRemoverBox remover;
-    // remover.SetRemoveOutside(true);
-    // remover.SetBox(ChVector<>(1500, 3000, 1500), ChFrame<>());
-
-    // Test also a ChParticleProcessor configured as a
-    // counter of particles that flow into a rectangle:
-    //  -create the trigger:
-    auto rectangleflow = chrono_types::make_shared<ChParticleEventFlowInRectangle>(8, 8);
-    rectangleflow->rectangle_csys =
-        ChCoordsys<>(ChVector<>(0, 2, 0), Q_from_AngAxis(-CH_C_PI_2, VECT_X));  // center and alignment of rectangle
-    rectangleflow->margin = 1;
-    //  -create the counter:
-    auto counter = chrono_types::make_shared<ChParticleProcessEventCount>();
-    //  -create the processor and plug in the trigger and the counter:
-    ChParticleProcessor processor_flowcount;
-    processor_flowcount.SetEventTrigger(rectangleflow);
-    processor_flowcount.SetParticleEventProcessor(counter);
-
-    // Bind all existing visual shapes to the visualization system
+    
     vis->AttachSystem(&sys);
-
-    // Modify some setting of the physical system for the simulation, if you want
-    sys.SetSolverType(ChSolver::Type::PSOR);
-    sys.SetSolverMaxIterations(40);
+    // This means that contactforces will be shown in Irrlicht application
+    vis->SetSymbolScale(0.2);
+    vis->EnableContactDrawing(ContactsDrawMode::CONTACT_NORMALS);
 
     // Simulation loop
     double timestep = 0.02;
-    while (vis->Run()) {
-        vis->BeginScene();
-        vis->Render();
-        vis->EndScene();
+    double elapsed = 0;
 
-        // Continuosly create particle flow:
+    ChRealtimeStepTimer realtime_timer;    
+    
+    // while (vis->Run()) {
+    while (emitter.GetTotCreatedParticles() < 1000) {
+        elapsed += timestep;
+        // vis->BeginScene();
+        // vis->Render();
+        // vis->EndScene();
+
+        // GetLog() << "Acc force:" << pendulum->Get_accumulated_force() << "\n";
+        // GetLog() << "Acc force:" << pendulum->GetAppliedForce() << "\n";
+        
         emitter.EmitParticles(sys, timestep);
-
-        // Continuosly check if some particle must be removed:
-        // remover.ProcessParticles(sys);
-
-        // Use the processor to count particle flow in the rectangle section:
-        processor_flowcount.ProcessParticles(sys);
-        GetLog() << "Particles being flown across rectangle:" << counter->counter << "\n";
-        // GetLog() << "Friction coefficient:" << emitter. "\n";
-
-
         sys.DoStepDynamics(timestep);
+        // realtime_timer.Spin(timestep);
+        
+        GetLog() << "Number of rods:" << emitter.GetTotCreatedParticles() << "\n";
     }
 
     return 0;
