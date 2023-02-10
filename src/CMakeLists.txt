@@ -8,7 +8,8 @@
 # Optionally enable building the various programs
 #-----------------------------------------------------------------------------
 
-option(BUILD_YJUNG "Yeonsu Jung's addition" ON)
+option(BUILD_ENTANGLEMENT "Entanglement simulation" ON)
+option(BUILD_YJUNG "Yeonsu Jung's addition" OFF)
 option(BUILD_DEMOS "Build demo programs" OFF)
 option(BUILD_BENCHMARKING "Build benchmark tests" OFF)
 option(BUILD_DEMOS_MBS "Build demo programs for MBS module" OFF)
@@ -500,7 +501,7 @@ if(ENABLE_HDF5)
         if (HDF5_FOUND)
             set(HDF5_INCLUDE_DIRS ${HDF5_INCLUDE_DIR})
             set(HDF5_C_LIBRARIES ${HDF5_C_${LIB_TYPE}_LIBRARY})
-            set(HDF5_CXX_LIBRARIES ${HDF5_CXX_${LIB_TYPE}_LIBRARY)
+            set(HDF5_CXX_LIBRARIES ${HDF5_CXX_${LIB_TYPE}_LIBRARY})
         endif()
     endif()
 
@@ -665,6 +666,10 @@ add_subdirectory(chrono_swig/chrono_csharp)
 
 # Add directories for model libraries
 add_subdirectory(chrono_models)
+
+if(BUILD_ENTANGLEMENT)
+  add_subdirectory(entanglement)
+endif()
 
 # Add directories for demo programs, unit test programs, and benchmark test programs.
 if(BUILD_DEMOS)
