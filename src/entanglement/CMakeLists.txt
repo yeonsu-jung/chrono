@@ -8,6 +8,7 @@
 
 # Add demos that can only work with Irrlicht
 if(ENABLE_MODULE_IRRLICHT)
+    message(STATUS "Irrlicht module enabled. Adding entanglement...")
     set(DEMOS ${DEMOS}
         entanglement        
     )
@@ -54,7 +55,7 @@ foreach(PROGRAM ${DEMOS})
     set_target_properties(${PROGRAM} PROPERTIES FOLDER demos COMPILE_FLAGS "${COMPILER_FLAGS}" LINK_FLAGS "${LINKER_FLAGS}")
 
     if(APPLE)
-        set_target_properties(${PROGRAM} PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${MACOSX_BUNDLE_INFO_PLIST})
+        set_target_properties(${PROGRAM} PROPERTIES MACOSX_BUNDLE_INFO_PLIST "${MACOSX_BUNDLE_INFO_PLIST}")
     endif()
 
     set_property(TARGET ${PROGRAM} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:${PROGRAM}>")

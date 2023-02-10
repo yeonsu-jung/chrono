@@ -8,11 +8,13 @@
 # Optionally enable building the various programs
 #-----------------------------------------------------------------------------
 
+option(ENABLE_MODULE_IRRLICHT "Enanble Irrlicht module" ON)
 option(BUILD_ENTANGLEMENT "Entanglement simulation" ON)
 option(BUILD_YJUNG "Yeonsu Jung's addition" OFF)
 option(BUILD_DEMOS "Build demo programs" OFF)
 option(BUILD_BENCHMARKING "Build benchmark tests" OFF)
 option(BUILD_DEMOS_MBS "Build demo programs for MBS module" OFF)
+
 
 #-----------------------------------------------------------------------------
 # Search prefixes specified by <PackageName>_ROOT
@@ -790,6 +792,7 @@ else()
 endif()
 
 if(ENABLE_MODULE_IRRLICHT)
+  message(STATUS "Enabling Irrlicht module")
   set(CHRONO_IRRLICHT "#define CHRONO_IRRLICHT")
 else()
   set(CHRONO_IRRLICHT "#undef CHRONO_IRRLICHT")

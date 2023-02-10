@@ -44,7 +44,12 @@ float GLOBAL_cohesion = 0;
 float GLOBAL_compliance = 0;
 float GLOBAL_dampingf = 0.1f;
 
-double factor = 50;
+// Some global variables used in this example
+// Consider using a class instead (see the other examples) <----- what does this mean?
+// TO DO: figure out effects of pre-factor
+// 
+int num_rods = 200;
+double factor = 10;
 double rod_radius = 0.81/50*factor;
 double rod_length = 0.81*factor;
 double rod_density = 8000*factor;
@@ -52,7 +57,6 @@ double rod_density = 8000*factor;
 double box_height = 10*factor;
 double box_width = 20*factor;
 double box_thickness = 1*factor;
-
 
 // Define a MyEventReceiver class which will be used to manage input
 // from the GUI graphical user interface
@@ -136,7 +140,7 @@ void create_some_falling_items(ChSystemNSC& sys) {
     auto obj_mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
     obj_mat->SetFriction(0.4f);
 
-    for (int bi = 0; bi < 200; bi++) {
+    for (int bi = 0; bi < num_rods; bi++) {
         // Create a bunch of ChronoENGINE rigid bodies which will fall..
         // auto mrigidBody = chrono_types::make_shared<ChBodyEasySphere>(0.81,      // radius
         //                                                               1000,      // density
@@ -166,31 +170,31 @@ void create_some_falling_items(ChSystemNSC& sys) {
 
     // Create the five walls of the rectangular container, using fixed rigid bodies of 'box' type
     auto floorBody = chrono_types::make_shared<ChBodyEasyBox>(box_width, box_thickness, box_width, 1000, true, true, ground_mat);
-    floorBody->SetPos(ChVector<>(0, -5, 0));
+    floorBody->SetPos(ChVector<>(0, -box_height/2, 0));
     floorBody->SetBodyFixed(true);
     floorBody->GetVisualShape(0)->SetMaterial(0, ground_mat_vis);
     sys.Add(floorBody);
 
     auto wallBody1 = chrono_types::make_shared<ChBodyEasyBox>(box_thickness, box_height, box_width+box_thickness - 0.01, 1000, true, true, ground_mat);
-    wallBody1->SetPos(ChVector<>(-box_height, 0, 0));
+    wallBody1->SetPos(ChVector<>(-box_width/2, 0, 0));
     wallBody1->SetBodyFixed(true);
     wallBody1->GetVisualShape(0)->SetMaterial(0, ground_mat_vis);
     sys.Add(wallBody1);
 
     auto wallBody2 = chrono_types::make_shared<ChBodyEasyBox>(box_thickness, box_height, box_width+box_thickness - 0.01, 1000, false, true, ground_mat);
-    wallBody2->SetPos(ChVector<>(box_height, 0, 0));
+    wallBody2->SetPos(ChVector<>(box_width/2, 0, 0));
     wallBody2->SetBodyFixed(true);
     // wallBody2->GetVisualShape(0)->SetMaterial(0, ground_mat_vis);
     sys.Add(wallBody2);
 
     auto wallBody3 = chrono_types::make_shared<ChBodyEasyBox>(box_width+box_thickness - 0.01, box_height, box_thickness, 1000, true, true, ground_mat);
-    wallBody3->SetPos(ChVector<>(0, 0, -box_height));
+    wallBody3->SetPos(ChVector<>(0, 0, -box_width/2));
     wallBody3->SetBodyFixed(true);
     wallBody3->GetVisualShape(0)->SetMaterial(0, ground_mat_vis);
     sys.Add(wallBody3);
 
     auto wallBody4 = chrono_types::make_shared<ChBodyEasyBox>(box_width+box_thickness - 0.01, box_height, box_thickness, 1000, true, true, ground_mat);
-    wallBody4->SetPos(ChVector<>(0, 0, box_height));
+    wallBody4->SetPos(ChVector<>(0, 0, box_width/2));
     wallBody4->SetBodyFixed(true);
     wallBody4->GetVisualShape(0)->SetMaterial(0, ground_mat_vis);
     sys.Add(wallBody4);    
