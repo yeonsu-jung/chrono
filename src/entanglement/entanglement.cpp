@@ -29,6 +29,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <entanglement.h>
 
 // Use the namespaces of Chrono
 using namespace chrono;
@@ -46,110 +47,114 @@ using namespace irr::gui;
 // Static values valid through the entire program (bad
 // programming practice, but enough for quick tests)
 
-float GLOBAL_friction = 0.4f;
-float GLOBAL_cohesion = 0;
-float GLOBAL_compliance = 0;
-float GLOBAL_dampingf = 0.1f;
+// float GLOBAL_friction = 0.4f;
+// float GLOBAL_cohesion = 0.0f;
+// float GLOBAL_compliance = 0;
+// float GLOBAL_dampingf = 0.0f;
 
 // Some global variables used in this example
 // Consider using a class instead (see the other examples) <----- what does this mean?
 // TO DO: figure out effects of pre-factor
 //
-int num_rods = 1000;
-double factor = 10;
-double rod_radius = 0.81 / 76 * factor*5;
-double rod_length = 0.81 * factor*5;
-double rod_density = 8000 * factor;
 
-double box_height = 10 * factor;
-double box_width = 20 * factor;
-double box_thickness = 1 * factor;
+// double factor = 100;
+// double rod_radius = 1/38/2*factor;
+// double rod_length = 1*factor;
+// double rod_density = 8000;
+// double box_height = 1.5*factor;
+// double box_width = 2.4*factor;
+// double box_thickness = 0.05*factor;
+// ChVector<> camera_position(0, 1 * factor, -3 * factor)
 
 // Define a MyEventReceiver class which will be used to manage input
 // from the GUI graphical user interface
 
-class MyEventReceiver : public IEventReceiver {
-  public:
-    MyEventReceiver(ChVisualSystemIrrlicht* vis) {
-        // store pointer application
-        m_vis = vis;
+// class MyEventReceiver : public IEventReceiver {
+//   public:
+//     MyEventReceiver(ChVisualSystemIrrlicht* vis) {
+//         // store pointer application
+//         m_vis = vis;
 
-        // ..add a GUI slider to control friction
-        scrollbar_friction = m_vis->GetGUIEnvironment()->addScrollBar(true, rect<s32>(510, 85, 650, 100), 0, 101);
-        scrollbar_friction->setMax(100);
-        scrollbar_friction->setPos(30);
-        text_friction =
-            m_vis->GetGUIEnvironment()->addStaticText(L"Friction coefficient:", rect<s32>(650, 85, 750, 100), false);
+//         // ..add a GUI slider to control friction
+//         scrollbar_friction = m_vis->GetGUIEnvironment()->addScrollBar(true, rect<s32>(510, 85, 650, 100), 0, 101);
+//         scrollbar_friction->setMax(100);
+//         scrollbar_friction->setPos(30);
+//         text_friction =
+//             m_vis->GetGUIEnvironment()->addStaticText(L"Friction coefficient:", rect<s32>(650, 85, 750, 100), false);
 
-        // ..add GUI slider to control the speed
-        scrollbar_cohesion = m_vis->GetGUIEnvironment()->addScrollBar(true, rect<s32>(510, 125, 650, 140), 0, 102);
-        scrollbar_cohesion->setMax(100);
-        scrollbar_cohesion->setPos(0);
-        text_cohesion =
-            m_vis->GetGUIEnvironment()->addStaticText(L"Cohesion [N]:", rect<s32>(650, 125, 750, 140), false);
+//         // ..add GUI slider to control the speed
+//         scrollbar_cohesion = m_vis->GetGUIEnvironment()->addScrollBar(true, rect<s32>(510, 125, 650, 140), 0, 102);
+//         scrollbar_cohesion->setMax(100);
+//         scrollbar_cohesion->setPos(0);
+//         text_cohesion =
+//             m_vis->GetGUIEnvironment()->addStaticText(L"Cohesion [N]:", rect<s32>(650, 125, 750, 140), false);
 
-        // ..add GUI slider to control the compliance
-        scrollbar_compliance = m_vis->GetGUIEnvironment()->addScrollBar(true, rect<s32>(510, 165, 650, 180), 0, 103);
-        scrollbar_compliance->setMax(100);
-        scrollbar_compliance->setPos(0);
-        text_compliance =
-            m_vis->GetGUIEnvironment()->addStaticText(L"Compliance [mm/N]:", rect<s32>(650, 165, 750, 180), false);
-    }
+//         // ..add GUI slider to control the compliance
+//         scrollbar_compliance = m_vis->GetGUIEnvironment()->addScrollBar(true, rect<s32>(510, 165, 650, 180), 0, 103);
+//         scrollbar_compliance->setMax(100);
+//         scrollbar_compliance->setPos(0);
+//         text_compliance =
+//             m_vis->GetGUIEnvironment()->addStaticText(L"Compliance [mm/N]:", rect<s32>(650, 165, 750, 180), false);
+//     }
 
-    bool OnEvent(const SEvent& event) {
-        // check if user moved the sliders with mouse..
-        if (event.EventType == EET_GUI_EVENT) {
-            s32 id = event.GUIEvent.Caller->getID();
+//     bool OnEvent(const SEvent& event) {
+//         // check if user moved the sliders with mouse..
+//         if (event.EventType == EET_GUI_EVENT) {
+//             s32 id = event.GUIEvent.Caller->getID();
 
-            switch (event.GUIEvent.EventType) {
-                case EGET_SCROLL_BAR_CHANGED:
-                    if (id == 101)  // id of 'flow' slider..
-                    {
-                        s32 pos = ((IGUIScrollBar*)event.GUIEvent.Caller)->getPos();
-                        GLOBAL_friction = (float)pos / 100;
-                    }
-                    if (id == 102)  // id of 'speed' slider..
-                    {
-                        s32 pos = ((IGUIScrollBar*)event.GUIEvent.Caller)->getPos();
-                        GLOBAL_cohesion = (((float)pos) / 100) * 200000.0f;
-                    }
-                    if (id == 103)  // id of 'compliance' slider..
-                    {
-                        s32 pos = ((IGUIScrollBar*)event.GUIEvent.Caller)->getPos();
-                        GLOBAL_compliance = (((float)pos) / 100) / 1000000.0f;
-                    }
-                    break;
-                default:
-                    break;
-            }
-        }
+//             switch (event.GUIEvent.EventType) {
+//                 case EGET_SCROLL_BAR_CHANGED:
+//                     if (id == 101)  // id of 'flow' slider..
+//                     {
+//                         s32 pos = ((IGUIScrollBar*)event.GUIEvent.Caller)->getPos();
+//                         GLOBAL_friction = (float)pos / 100;
+//                     }
+//                     if (id == 102)  // id of 'speed' slider..
+//                     {
+//                         s32 pos = ((IGUIScrollBar*)event.GUIEvent.Caller)->getPos();
+//                         GLOBAL_cohesion = (((float)pos) / 100) * 200000.0f;
+//                     }
+//                     if (id == 103)  // id of 'compliance' slider..
+//                     {
+//                         s32 pos = ((IGUIScrollBar*)event.GUIEvent.Caller)->getPos();
+//                         GLOBAL_compliance = (((float)pos) / 100) / 1000000.0f;
+//                     }
+//                     break;
+//                 default:
+//                     break;
+//             }
+//         }
 
-        return false;
-    }
+//         return false;
+//     }
 
-  private:
-    ChVisualSystemIrrlicht* m_vis;
+//   private:
+//     ChVisualSystemIrrlicht* m_vis;
 
-    IGUIScrollBar* scrollbar_friction;
-    IGUIStaticText* text_friction;
-    IGUIScrollBar* scrollbar_cohesion;
-    IGUIStaticText* text_cohesion;
-    IGUIScrollBar* scrollbar_compliance;
-    IGUIStaticText* text_compliance;
-};
+//     IGUIScrollBar* scrollbar_friction;
+//     IGUIStaticText* text_friction;
+//     IGUIScrollBar* scrollbar_cohesion;
+//     IGUIStaticText* text_cohesion;
+//     IGUIScrollBar* scrollbar_compliance;
+//     IGUIStaticText* text_compliance;
+// };
 
-void test_with_single_cylinder(ChSystemNSC& sys) {
+// std::shared_ptr<ChBody>
+std::shared_ptr<ChBody> test_with_single_cylinder(ChSystemNSC& sys) {
     auto mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
     mat->SetFriction(0.4f);
+    mat->SetCohesion(0.8f);
 
     auto cyl = chrono_types::make_shared<ChBodyEasyCylinder>(rod_radius, rod_length, rod_density, true, true, mat);
-    cyl->SetPos(ChVector<>(0, 0, 0));
-    cyl->SetRot(Q_from_AngAxis(CH_C_PI / 2, VECT_X));
+    cyl->SetPos(ChVector<>(0, 20, 0));
+    cyl->SetRot(Q_from_AngAxis(0, VECT_Y));
     sys.AddBody(cyl);
+
+    return cyl;
 }
 
-void load_rods_from_file(ChSystemNSC& sys) {
-    std::string file_path = "C:/Users/yjung/Dropbox (Harvard University)/Entangled/EnsembleAnalysis/Small_0/SmallRandomRods_[R1.2_H1.5_L1_A0.01_N1289_Date2023-02-08_12-56-38].csv";
+void load_rods_from_file(ChSystemNSC& sys, std::string file_path, double rod_radius, double rod_length, double rod_density) {
+    // std::string file_path = "C:/Users/yjung/Documents/GitHub/generate_random_rods/RandomRods_[Alpha38_R15.200000000000001_H15.200000000000001_L15.200000000000001_A0.20_N119_Date2023-02-11_18-14-41].csv";
     auto mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
     mat->SetFriction(0.4f);
 
@@ -174,12 +179,12 @@ void load_rods_from_file(ChSystemNSC& sys) {
         std::stringstream ss(line);
 
         // if (line.empty() || iter > 10) {
-        if (iter > 50) {
+        if (iter > N - 2) {
             break;
         }
+
         GetLog() << "iter: " << iter << "\n";
         iter += 1;
-
         for (int i = 0; i < 6; i++) {
             // while (ss.good()) {
             std::string substr;
@@ -188,13 +193,13 @@ void load_rods_from_file(ChSystemNSC& sys) {
         }
 
         auto rod = chrono_types::make_shared<ChBodyEasyCylinder>(rod_radius, rod_length, rod_density, true, true, mat);
-        rod->SetPos(ChVector<>(0, 0, 0));
-        // rod->SetPos(ChVector<>((v[0] + v[3]) / 2 * factor*5, (v[1] + v[4]) / 2 * factor*5, (v[2] + v[5]) / 2 * factor*5));
-        rod->SetPos(ChVector<>((v[0]*factor*5,v[1]*factor*5,v[2]*factor*5)));
+        double local_factor = 1;        
+        rod->SetPos(ChVector<>((v[0] + v[3]) / 2 * local_factor, (v[2] + v[5]) / 2 * local_factor -box_height/2 - box_thickness, (v[1] + v[4]) / 2 * local_factor));
+        // rod->SetPos(ChVector<>((v[0]*factor*5,v[1]*factor*5,v[2]*factor*5)));
         rod->GetVisualShape(0)->SetTexture(GetChronoDataFile("textures/rock.jpg"));
 
-        const ChVector<> v1(v[0], v[1], v[2]);
-        const ChVector<> v2(v[3], v[4], v[5]);
+        const ChVector<> v1(v[0], v[2], v[1]);
+        const ChVector<> v2(v[3], v[5], v[4]);
 
         rod->SetRot(Q_from_Vect_to_Vect(v1, v2));
         rod->SetEvalContactCn(true);
@@ -215,6 +220,7 @@ void create_some_falling_items(ChSystemNSC& sys) {
     // Shared contact material for falling objects
     auto obj_mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
     obj_mat->SetFriction(0.4f);
+    obj_mat->SetCohesion(0.8f);
 
     for (int bi = 0; bi < num_rods; bi++) {
         // Create a bunch of ChronoENGINE rigid bodies which will fall..
@@ -241,7 +247,7 @@ void create_some_falling_items(ChSystemNSC& sys) {
     }    
 }
 
-void create_walls(ChSystemNSC& sys) {
+void create_walls(ChSystemNSC& sys, double box_width, double box_height, double box_thickness) {
     // Contact and visualization materials for container
     auto ground_mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
     auto ground_mat_vis = chrono_types::make_shared<ChVisualMaterial>(*ChVisualMaterial::Default());
@@ -253,6 +259,10 @@ void create_walls(ChSystemNSC& sys) {
     floorBody->SetPos(ChVector<>(0, -box_height / 2, 0));
     floorBody->SetBodyFixed(true);
     floorBody->GetVisualShape(0)->SetMaterial(0, ground_mat_vis);
+
+    auto mk = chrono_types::make_shared<ChMarker>();
+    mk->SetName("floor_body");
+    floorBody->AddMarker(mk);
     sys.Add(floorBody);
 
     auto wallBody1 = chrono_types::make_shared<ChBodyEasyBox>(
@@ -284,18 +294,73 @@ void create_walls(ChSystemNSC& sys) {
     sys.Add(wallBody4);
 }
 
+void parsing_inputs_from_file(int &num_rods, double &rod_length, double &rod_radius, double &rod_density, double &box_width,
+                              double &box_height, double &box_thickness, double &factor, std::string &file_path) {
+    std::ifstream file("input.txt");
+    std::string str;
+    while (std::getline(file, str)) {
+        std::istringstream iss(str);
+        std::string key;
+        iss >> key;
+        if (key == "num_rods") {
+            iss >> num_rods;
+        } else if (key == "rod_length") {
+            iss >> rod_length;
+        } else if (key == "rod_radius") {
+            iss >> rod_radius;
+        } else if (key == "rod_density") {
+            iss >> rod_density;
+        } else if (key == "box_width") {
+            iss >> box_width;
+        } else if (key == "box_height") {
+            iss >> box_height;
+        } else if (key == "box_thickness") {
+            iss >> box_thickness;
+        } else if (key == "factor") {
+            iss >> factor;
+        } else if (key == "file_path") {
+            std::cout << "file_path" << std::endl;
+        
+
+    }
+}
+// you are amazing copilot!
+
+
 int main(int argc, char* argv[]) {
     GetLog() << "Copyright (c) 2017 projectchrono.org\nChrono version: " << CHRONO_VERSION << "\n\n";
+
+    int num_rods = 1200;
+    double factor = 1;
+    double rod_radius = 0.2;
+    double alpha = 50;
+    double rod_length = rod_radius*2*alpha;
+    double rod_density = 8000;
+    double box_height = 2*rod_length;
+    double box_width = 4*rod_length;
+    double box_thickness = 1;
+
+    double friction_coefficient = 0.4;
+    double compliance = 0;
+
+    std::string file_path = "";
+
+    ChVector<> camera_position(0, 2 * rod_length, -10 * rod_length);
+
+    parsing_inputs_from_file(int num_rods, double rod_length, double rod_radius, double rod_density, double box_width,
+                             double box_height, double box_thickness, double factor);
 
     // Create a ChronoENGINE physical system
     ChSystemNSC sys;
 
     // Create all the rigid bodies.
 
-    // create_some_falling_items(sys);
-    create_walls(sys); // sys - as a reference
-    // test_with_single_cylinder(sys);
-    load_rods_from_file(sys);
+    // create_some_falling_items(sys);    
+    create_walls(sys, box_width, box_height, box_thickness, rod_radius, rod_length, rod_density, factor);
+    // auto cyl = chrono_types::make_shared<ChBody>(); // tricky...
+    // cyl = test_with_single_cylinder(sys);
+    // cyl = test_with_single_cylinder(sys);
+    load_rods_from_file(sys, file_path, rod_radius, rod_length, rod_density, factor);
 
     // Create the Irrlicht visualization system
     auto vis = chrono_types::make_shared<ChVisualSystemIrrlicht>();
@@ -305,13 +370,13 @@ int main(int argc, char* argv[]) {
     vis->Initialize();
     // vis->AddLogo();
     vis->AddSkyBox();
-    vis->AddCamera(ChVector<>(0, 5 * factor, -20 * factor));
+    vis->AddCamera(camera_position);
     vis->AddTypicalLights();
 
     // This is for GUI tweaking of system parameters..
-    MyEventReceiver receiver(vis.get());
+    // MyEventReceiver receiver(vis.get());
     // note how to add the custom event receiver to the default interface:
-    vis->AddUserEventReceiver(&receiver);
+    // vis->AddUserEventReceiver(&receiver);
 
     // Modify some setting of the physical system for the simulation, if you want
 
@@ -322,50 +387,55 @@ int main(int argc, char* argv[]) {
     // touching bodies, but the user can override this value when each contact is created,
     // by instancing a callback as in the following example:
 
-    class MyContactCallback : public ChContactContainer::AddContactCallback {
-      public:
-        virtual void OnAddContact(const collision::ChCollisionInfo& contactinfo,
-                                  ChMaterialComposite* const material) override {
-            // Downcast to appropriate composite material type
-            auto mat = static_cast<ChMaterialCompositeNSC* const>(material);
+    // class MyContactCallback : public ChContactContainer::AddContactCallback {
+    //   public:
+    //     virtual void OnAddContact(const collision::ChCollisionInfo& contactinfo,
+    //                               ChMaterialComposite* const material) override {
+    //         // Downcast to appropriate composite material type
+    //         auto mat = static_cast<ChMaterialCompositeNSC* const>(material);
 
-            // Set friction according to user setting:
-            mat->static_friction = GLOBAL_friction;
+    //         // Set friction according to user setting:
+    //         mat->static_friction = GLOBAL_friction;
 
-            // Set compliance (normal and tangential at once)
-            mat->compliance = GLOBAL_compliance;
-            mat->complianceT = GLOBAL_compliance;
-            mat->dampingf = GLOBAL_dampingf;
+    //         // Set compliance (normal and tangential at once)
+    //         mat->compliance = GLOBAL_compliance;
+    //         mat->complianceT = GLOBAL_compliance;
+    //         mat->dampingf = GLOBAL_dampingf;
 
-            // Set cohesion according to user setting:
-            // Note that we must scale the cohesion force value by time step, because
-            // the material 'cohesion' value has the dimension of an impulse.
-            float my_cohesion_force = GLOBAL_cohesion;
-            mat->cohesion = (float)msystem->GetStep() * my_cohesion_force;  //<- all contacts will have this cohesion!
+    //         // Set cohesion according to user setting:
+    //         // Note that we must scale the cohesion force value by time step, because
+    //         // the material 'cohesion' value has the dimension of an impulse.
+    //         float my_cohesion_force = GLOBAL_cohesion;
+    //         mat->cohesion = (float)msystem->GetStep() * my_cohesion_force;  //<- all contacts will have this cohesion!
 
-            if (contactinfo.distance > 0.12)
-                mat->cohesion = 0;
+    //         if (contactinfo.distance > 0.12)
+    //             mat->cohesion = 0;
 
-            // Note that here you might decide to modify the cohesion
-            // depending on object sizes, type, time, position, etc. etc.
-            // For example, after some time disable cohesion at all, just
-            // add here:
-            //    if (msystem->GetChTime() > 10) mat->cohesion = 0;
-        };
-        ChSystemNSC* msystem;
-    };
+    //         // Note that here you might decide to modify the cohesion
+    //         // depending on object sizes, type, time, position, etc. etc.
+    //         // For example, after some time disable cohesion at all, just
+    //         // add here:
+    //         //    if (msystem->GetChTime() > 10) mat->cohesion = 0;
+    //     };
+    //     ChSystemNSC* msystem;
+    // };
 
-    auto mycontact_callback = chrono_types::make_shared<MyContactCallback>();  // create the callback object
-    mycontact_callback->msystem = &sys;                                        // will be used by callback
+    // auto mycontact_callback = chrono_types::make_shared<MyContactCallback>();  // create the callback object
+    // mycontact_callback->msystem = &sys;                                        // will be used by callback
 
-    // Use the above callback to process each contact as it is created.
-    sys.GetContactContainer()->RegisterAddContactCallback(mycontact_callback);
+    // // Use the above callback to process each contact as it is created.
+    // sys.GetContactContainer()->RegisterAddContactCallback(mycontact_callback);
 
     // Simulation loop
+    ChVector<> pos;
     while (vis->Run()) {
         vis->BeginScene();
         vis->Render();
         vis->EndScene();
+                
+        // pos = cyl->GetPos();
+        // GetLog() << sys << "\n";
+        // GetLog() << "pos: " << pos[0] << ", " << pos[1] << ", " << pos[2] << "\n";
 
         sys.DoStepDynamics(0.01);
     }
