@@ -143,6 +143,7 @@ using namespace irr::gui;
 std::shared_ptr<ChBody> test_with_single_cylinder(ChSystemNSC& sys) {
     auto mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
     mat->SetFriction(0.4f);
+    mat->SetRollingFriction(0.05f);  // what value?
     mat->SetCohesion(0.8f);
 
     auto cyl = chrono_types::make_shared<ChBodyEasyCylinder>(rod_radius, rod_length, rod_density, true, true, mat);
@@ -387,44 +388,44 @@ int main(int argc, char* argv[]) {
     // touching bodies, but the user can override this value when each contact is created,
     // by instancing a callback as in the following example:
 
-    // class MyContactCallback : public ChContactContainer::AddContactCallback {
-    //   public:
-    //     virtual void OnAddContact(const collision::ChCollisionInfo& contactinfo,
-    //                               ChMaterialComposite* const material) override {
-    //         // Downcast to appropriate composite material type
-    //         auto mat = static_cast<ChMaterialCompositeNSC* const>(material);
+    class MyContactCallback : public ChContactContainer::AddContactCallback {
+      public:
+        virtual void OnAddContact(const collision::ChCollisionInfo& contactinfo,
+                                  ChMaterialComposite* const material) override {
+            // Downcast to appropriate composite material type
+            auto mat = static_cast<ChMaterialCompositeNSC* const>(material);
 
-    //         // Set friction according to user setting:
-    //         mat->static_friction = GLOBAL_friction;
+            // Set friction according to user setting:
+            // mat->static_friction = GLOBAL_friction;
 
-    //         // Set compliance (normal and tangential at once)
-    //         mat->compliance = GLOBAL_compliance;
-    //         mat->complianceT = GLOBAL_compliance;
-    //         mat->dampingf = GLOBAL_dampingf;
+            // Set compliance (normal and tangential at once)
+            // mat->compliance = GLOBAL_compliance;
+            // mat->complianceT = GLOBAL_compliance;
+            // mat->dampingf = GLOBAL_dampingf;
 
-    //         // Set cohesion according to user setting:
-    //         // Note that we must scale the cohesion force value by time step, because
-    //         // the material 'cohesion' value has the dimension of an impulse.
-    //         float my_cohesion_force = GLOBAL_cohesion;
-    //         mat->cohesion = (float)msystem->GetStep() * my_cohesion_force;  //<- all contacts will have this cohesion!
+            // Set cohesion according to user setting:
+            // Note that we must scale the cohesion force value by time step, because
+            // the material 'cohesion' value has the dimension of an impulse.
+            float my_cohesion_force = GLOBAL_cohesion;
+            mat->cohesion = (float)msystem->GetStep() * my_cohesion_force;  //<- all contacts will have this cohesion!
 
-    //         if (contactinfo.distance > 0.12)
-    //             mat->cohesion = 0;
+            if (contactinfo.distance > 0.12)
+                mat->cohesion = 0;
 
-    //         // Note that here you might decide to modify the cohesion
-    //         // depending on object sizes, type, time, position, etc. etc.
-    //         // For example, after some time disable cohesion at all, just
-    //         // add here:
-    //         //    if (msystem->GetChTime() > 10) mat->cohesion = 0;
-    //     };
-    //     ChSystemNSC* msystem;
-    // };
+            // Note that here you might decide to modify the cohesion
+            // depending on object sizes, type, time, position, etc. etc.
+            // For example, after some time disable cohesion at all, just
+            // add here:
+            //    if (msystem->GetChTime() > 10) mat->cohesion = 0;
+        };
+        ChSystemNSC* msystem;
+    };
 
-    // auto mycontact_callback = chrono_types::make_shared<MyContactCallback>();  // create the callback object
-    // mycontact_callback->msystem = &sys;                                        // will be used by callback
+    auto mycontact_callback = chrono_types::make_shared<MyContactCallback>();  // create the callback object
+    mycontact_callback->msystem = &sys;                                        // will be used by callback
 
-    // // Use the above callback to process each contact as it is created.
-    // sys.GetContactContainer()->RegisterAddContactCallback(mycontact_callback);
+    // Use the above callback to process each contact as it is created.
+    sys.GetContactContainer()->RegisterAddContactCallback(mycontact_callback);
 
     // Simulation loop
     ChVector<> pos;
