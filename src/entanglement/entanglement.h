@@ -1,11 +1,11 @@
-// #ifndef MY_HEADER_FILE
-// #define MY_HEADER_FILE
+#ifndef MY_HEADER_FILE
+#define MY_HEADER_FILE
 
-// #include "chrono/assets/ChTexture.h"
-// #include "chrono/physics/ChBodyEasy.h"
-// #include "chrono/physics/ChLinkMotorRotationSpeed.h"
-// #include "chrono/physics/ChSystemNSC.h"
-// #include "chrono_irrlicht/ChVisualSystemIrrlicht.h"
+#include "chrono/assets/ChTexture.h"
+#include "chrono/physics/ChBodyEasy.h"
+#include "chrono/physics/ChLinkMotorRotationSpeed.h"
+#include "chrono/physics/ChSystemNSC.h"
+#include "chrono_irrlicht/ChVisualSystemIrrlicht.h"
 
 // Use the namespaces of Chrono
 using namespace chrono;
@@ -48,4 +48,4 @@ using namespace chrono::irrlicht;
 // };
 
 
-// #endif
+#endif
