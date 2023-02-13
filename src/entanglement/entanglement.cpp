@@ -122,7 +122,7 @@ std::shared_ptr<ChBody> test_with_single_cylinder(ChSystemNSC& sys, double rod_r
     mat->SetRollingFriction(0.05f);  // what value?
     mat->SetCohesion(0.8f);
 
-    auto cyl = chrono_types::make_shared<ChBodyEasyCylinder>(rod_radius, rod_length, rod_density, true, true, mat);
+    auto cyl = chrono_types::make_shared<ChBodyEasyCylinder>(rod_radius, rod_length, rod_density, true, true, mat,chrono_types::make_shared<collision::ChCollisionModelBullet>());
     cyl->SetPos(ChVector<>(0, 20, 0));
     cyl->SetRot(Q_from_AngAxis(0, VECT_Y));
     sys.AddBody(cyl);
@@ -133,7 +133,7 @@ std::shared_ptr<ChBody> test_with_single_cylinder(ChSystemNSC& sys, double rod_r
 void load_rods_from_file(ChSystemNSC& sys, std::string file_path, double rod_radius, double rod_length, double rod_density, double box_height, double box_width, double box_thickness,
                             double friction_coefficient, double cohesion) {
     // std::string file_path = "C:/Users/yjung/Documents/GitHub/generate_random_rods/RandomRods_[Alpha38_R15.200000000000001_H15.200000000000001_L15.20000000000001_A0.20_N119_Date2023-02-11_18-14-41].csv";
-    file_path = "C:/Users/yjung/Documents/GitHub/generate_random_rods/test.csv";
+    // file_path = "/Users/yeonsu/Documents/github/generate_random_rods/test.csv";
     auto mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
     mat->SetFriction(friction_coefficient);
     mat->SetCohesion(cohesion);
@@ -284,7 +284,8 @@ void create_walls(ChSystemNSC& sys, double box_width, double box_height, double 
 void parsing_inputs_from_file(int &num_rods, double &rod_length, double &rod_radius, double &rod_density, double &box_width,
                             double &box_height, double &box_thickness, double &factor, std::string &file_path,
                             double &friction_coefficient, double &cohesion) {
-    std::ifstream file("C:/Users/yjung/Documents/GitHub/chrono/build/bin/Release/inputs.txt");
+    // std::ifstream file("C:/Users/yjung/Documents/GitHub/chrono/build/bin/Release/inputs.txt");
+    std::ifstream file("/Users/yeonsu/Documents/github/chrono/build/bin/inputs.txt");
     // std::ifstream file("./inputs.txt");
     std::string str;
     while (std::getline(file, str)) {
@@ -366,8 +367,9 @@ int main(int argc, char* argv[]) {
     load_rods_from_file(sys, file_path, rod_radius, rod_length, rod_density, box_height, box_width, box_thickness, friction_coefficient, cohesion);
     // (ChSystemNSC& sys, std::string file_path, double rod_radius, double rod_length, double rod_density, double box_height, double box_width, double box_thickness)
     // Create the Irrlicht visualization system
+    auto vis = chrono_types::make_shared<ChVisualSystemIrrlicht>();
+    
     if (visualize) {
-        auto vis = chrono_types::make_shared<ChVisualSystemIrrlicht>();
         vis->AttachSystem(&sys);
         vis->SetWindowSize(800, 600);
         vis->SetWindowTitle("Contacts with cohesion");
@@ -410,7 +412,7 @@ int main(int argc, char* argv[]) {
             // Set cohesion according to user setting:
             // Note that we must scale the cohesion force value by time step, because
             // the material 'cohesion' value has the dimension of an impulse.
-            float my_cohesion_force = GLOBAL_cohesion;
+            float my_cohesion_force = 0.4;
             mat->cohesion = (float)msystem->GetStep() * my_cohesion_force;  //<- all contacts will have this cohesion!
 
             if (contactinfo.distance > 0.12)
@@ -432,24 +434,43 @@ int main(int argc, char* argv[]) {
     sys.GetContactContainer()->RegisterAddContactCallback(mycontact_callback);
 
     // Simulation loop
+    std::ofstream out_file;
+    out_file.open("output.txt");    
+
+    // if (!out_file.is_open()) {        
+    //     GetLog() << "Unable to open file" << std::endl;
+    // }
+
     ChVector<> pos;
+    ChQuaternion<> rot;
+
     if (visualize) {
-    while (vis->Run()) {
-        vis->BeginScene();
-        vis->Render();
-        vis->EndScene();
-                
-        // pos = cyl->GetPos();
-        // GetLog() << sys << "\n";
-        // GetLog() << "pos: " << pos[0] << ", " << pos[1] << ", " << pos[2] << "\n";
-        // TO DO: why burst happens?
-        sys.DoStepDynamics(0.005);
+        while (vis->Run()) {
+            vis->BeginScene();
+            vis->Render();
+            vis->EndScene();
+
+            // sys.assembly.Get_bodylist();
+                    
+            // pos = cyl->GetPos();
+            // GetLog() << sys << "\n";
+            // GetLog() << "pos: " << pos[0] << ", " << pos[1] << ", " << pos[2] << "\n";
+            // TO DO: why burst happens?
+            sys.DoStepDynamics(0.005);
     }
     } else { // no visualization
-        while (sys.GetChTime() < 10) {
+        while (sys.GetChTime() < 1) {
+            pos = sys.Get_bodylist()[50]->GetPos();
+            rot = sys.Get_bodylist()[50]->GetRot();
+            // TO DO: write down callback function to get the position of the cylinder
+            // TO DO: convert the quaternion to vector
+
+            GetLog() << "pos: " << pos[0] << ", " << pos[1] << ", " << pos[2] << "\n";
+            GetLog() << "rot: " << rot.e0() << ", " << rot.e1() << ", " << rot.e2() << ", " << rot.e3() << "\n";            
+            out_file << pos[0] << ", " << pos[1] << ", " << pos[2] << ", " << rot.e0() << ", " << rot.e1() << ", " << rot.e2() << ", " << rot.e3() << "\n";
             sys.DoStepDynamics(0.01);
         }
     }
-
+    out_file.close();
     return 0;
 }
