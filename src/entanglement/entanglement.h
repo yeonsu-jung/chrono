@@ -7,6 +7,10 @@
 // #include "chrono/physics/ChSystemNSC.h"
 // #include "chrono_irrlicht/ChVisualSystemIrrlicht.h"
 
+// Use the namespaces of Chrono
+using namespace chrono;
+using namespace chrono::collision;
+using namespace chrono::irrlicht;
 
 // std::shared_ptr<ChBody> test_with_single_cylinder(ChSystemNSC& sys);
 
