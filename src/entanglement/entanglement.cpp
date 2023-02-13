@@ -29,7 +29,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
-#include <entanglement.h>
+// #include <entanglement.h>
 
 // Use the namespaces of Chrono
 using namespace chrono;
@@ -340,14 +340,12 @@ int main(int argc, char* argv[]) {
     double box_height = 2*rod_length;
     double box_width = 4*rod_length;
     double box_thickness = 1;
-
     double friction_coefficient = 0.4;
     double compliance = 0;
-
     std::string file_path = "";
+    bool visualize = false;
 
     ChVector<> camera_position(0, 2 * rod_length, -10 * rod_length);
-
     parsing_inputs_from_file(int num_rods, double rod_length, double rod_radius, double rod_density, double box_width,
                              double box_height, double box_thickness, double factor);
 
@@ -364,15 +362,17 @@ int main(int argc, char* argv[]) {
     load_rods_from_file(sys, file_path, rod_radius, rod_length, rod_density, factor);
 
     // Create the Irrlicht visualization system
-    auto vis = chrono_types::make_shared<ChVisualSystemIrrlicht>();
-    vis->AttachSystem(&sys);
-    vis->SetWindowSize(800, 600);
-    vis->SetWindowTitle("Contacts with cohesion");
-    vis->Initialize();
-    // vis->AddLogo();
-    vis->AddSkyBox();
-    vis->AddCamera(camera_position);
-    vis->AddTypicalLights();
+    if (visualize) {
+        auto vis = chrono_types::make_shared<ChVisualSystemIrrlicht>();
+        vis->AttachSystem(&sys);
+        vis->SetWindowSize(800, 600);
+        vis->SetWindowTitle("Contacts with cohesion");
+        vis->Initialize();
+        // vis->AddLogo();
+        vis->AddSkyBox();
+        vis->AddCamera(camera_position);
+        vis->AddTypicalLights();
+    }
 
     // This is for GUI tweaking of system parameters..
     // MyEventReceiver receiver(vis.get());
@@ -429,6 +429,7 @@ int main(int argc, char* argv[]) {
 
     // Simulation loop
     ChVector<> pos;
+    if (visualize) {
     while (vis->Run()) {
         vis->BeginScene();
         vis->Render();
@@ -439,6 +440,11 @@ int main(int argc, char* argv[]) {
         // GetLog() << "pos: " << pos[0] << ", " << pos[1] << ", " << pos[2] << "\n";
 
         sys.DoStepDynamics(0.01);
+    }
+    } else { // no visualization
+        while (sys.GetChTime() < 10) {
+            sys.DoStepDynamics(0.01);
+        }
     }
 
     return 0;
