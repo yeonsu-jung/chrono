@@ -133,6 +133,115 @@ std::shared_ptr<ChBody> test_with_single_cylinder(ChSystemNSC& sys,
     return cyl;
 }
 
+void load_rods_from_file(ChSystemNSC& sys, std::string file_path, double& box_height, double rod_density, double friction_coefficient, double cohesion) {
+    double alpha;
+    double rod_radius;
+    double rod_length;
+    double container_radius;
+    double container_height;
+    int num_rods;
+    std::string generated_time;
+
+    auto mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
+    mat->SetFriction(friction_coefficient);
+    mat->SetCohesion(cohesion);
+    std::cout << "Loading rods from file: " << file_path << std::endl;
+
+    std::ifstream myFile;
+    myFile.open(file_path);
+    int N_skip = 0;
+    while (myFile.good()) {
+        std::string line;
+        std::getline(myFile, line, '\n');
+        std::istringstream iss(line);
+        std::string key;
+        iss >> key;
+        if (key == "alpha") {
+            iss >> alpha;            
+        } else if (key == "rod_radius") {
+            iss >> rod_radius;
+        } else if (key == "rod_length") {
+            iss >> rod_length;
+        } else if (key == "container_radius") {
+            iss >> container_radius;
+        } else if (key == "container_height") {
+            iss >> container_height;
+        } else if (key == "num_rods") {
+            iss >> num_rods;
+        } else if (key == "generated_time") {
+            iss >> generated_time;
+        } else if (std::isdigit(key[0]) || key[0] == '-') {
+            break;
+        }
+        N_skip++;
+    }
+    myFile.close();
+
+    box_height = container_height;
+    double box_thickness = 1.0;
+
+    int N = 0;
+    myFile.open(file_path);
+    std::string line;
+    while (myFile.good()) {
+        std::getline(myFile, line, '\n');
+        N = N + 1;
+    }
+    GetLog() << "N: " << N - N_skip - 1 << "\n";
+    myFile.close();
+
+    assert(N - N_skip - 1 == num_rods);
+    GetLog() << "Creating rods..."
+             << "\n";
+    myFile.open(file_path);
+    double v[6];  // should it be something like a pointer?
+    int iter = 0;
+    while (myFile.good()) {
+        if (iter < N_skip) {
+            std::getline(myFile, line, '\n');
+            iter += 1;
+            continue;
+        }
+
+        std::getline(myFile, line, '\n');
+        std::stringstream ss(line);
+
+        // if (line.empty() || iter > 10) {
+        if (iter > N - 2) {
+            break;
+        }
+
+        // GetLog() << "iter: " << iter << "\n";
+        iter += 1;
+        for (int i = 0; i < 6; i++) {
+            // while (ss.good()) {
+            std::string substr;
+            std::getline(ss, substr, ',');
+            v[i] = std::stod(substr);
+        }
+
+        auto rod = chrono_types::make_shared<ChBodyEasyCylinder>(rod_radius, rod_length, rod_density, true, true, mat);
+        double local_factor = 1;
+        rod->SetPos(ChVector<>((v[0] + v[3]) / 2 * local_factor,
+                               (v[2] + v[5]) / 2 * local_factor - box_height/2,
+                               (v[1] + v[4]) / 2 * local_factor));
+        // rod->SetPos(ChVector<>((v[0]*factor*5,v[1]*factor*5,v[2]*factor*5)));
+        rod->GetVisualShape(0)->SetTexture(GetChronoDataFile("textures/rock.jpg"));
+
+        const ChVector<> v1(v[0], v[2], v[1]);
+        const ChVector<> v2(v[3], v[5], v[4]);
+
+        // GetLog() << "Rod length: " << (v1-v2).Length() << "\n";
+
+        rod->SetRot(Q_from_Vect_to_Vect(VECT_Y, v2 - v1));
+        rod->SetEvalContactCn(true);
+        rod->SetEvalContactCt(true);
+        rod->SetEvalContactKf(true);
+        rod->SetEvalContactSf(true);
+        sys.Add(rod);
+    }
+}
+
 void load_rods_from_file(ChSystemNSC& sys,
                          std::string file_path,
                          double rod_radius,
@@ -155,32 +264,18 @@ void load_rods_from_file(ChSystemNSC& sys,
     std::ifstream myFile;
     myFile.open(file_path);
     int N = 0;
+    std::string line;
     while (myFile.good()) {
-        std::string line;
         std::getline(myFile, line, '\n');
         N = N + 1;
     }
     GetLog() << "N: " << N << "\n";
     myFile.close();
-
-    std::ifstream myFile;
-    myFile.open(file_path);
-    int N = 0;
-    while (myFile.good()) {
-        std::string line;
-        std::getline(myFile, line, '\n');
-        N = N + 1;
-    }
-    GetLog() << "N: " << N << "\n";
-    myFile.close();
-
-    GetLog() << "Creating rods..."
-             << "\n";
+    
     myFile.open(file_path);
     double v[6];  // should it be something like a pointer?
     int iter = 0;
     while (myFile.good()) {
-        std::string line;
         std::getline(myFile, line, '\n');
         std::stringstream ss(line);
 
@@ -208,10 +303,10 @@ void load_rods_from_file(ChSystemNSC& sys,
 
         const ChVector<> v1(v[0], v[2], v[1]);
         const ChVector<> v2(v[3], v[5], v[4]);
-        
+
         // GetLog() << "Rod length: " << (v1-v2).Length() << "\n";
 
-        rod->SetRot(Q_from_Vect_to_Vect(VECT_Y, v2-v1));
+        rod->SetRot(Q_from_Vect_to_Vect(VECT_Y, v2 - v1));
         rod->SetEvalContactCn(true);
         rod->SetEvalContactCt(true);
         rod->SetEvalContactKf(true);
@@ -390,10 +485,9 @@ int main(int argc, char* argv[]) {
     std::string file_path = "";
     bool visualize = false;
     double simulation_time = 1;
-    
 
     parsing_inputs_from_file(num_rods, rod_length, rod_radius, rod_density, box_width, box_height, box_thickness,
-                             factor, file_path, friction_coefficient, cohesion, visualize,simulation_time);
+                             factor, file_path, friction_coefficient, cohesion, visualize, simulation_time);
     std::cout << "num_rods: " << num_rods << std::endl;
     std::cout << "rod_length: " << rod_length << std::endl;
     std::cout << "rod_radius: " << rod_radius << std::endl;
@@ -407,7 +501,7 @@ int main(int argc, char* argv[]) {
     std::cout << "visualize: " << visualize << std::endl;
     std::cout << "simulation_time: " << simulation_time << std::endl;
 
-    ChVector<> camera_position(0, rod_length, -5 * rod_length);
+    ChVector<> camera_position(0, box_height/2, -box_width);
 
     // void load_rods_from_file(ChSystemNSC& sys, std::string file_path, double rod_radius, double rod_length, double
     // rod_density, double box_height, double box_width, double box_thickness) {
@@ -423,8 +517,16 @@ int main(int argc, char* argv[]) {
     // auto cyl = chrono_types::make_shared<ChBody>(); // tricky...
     // cyl = test_with_single_cylinder(sys);
     // cyl = test_with_single_cylinder(sys);
-    load_rods_from_file(sys, file_path, rod_radius, rod_length, rod_density, box_height, box_width, box_thickness,
-                        friction_coefficient, cohesion);
+    // load_rods_from_file(sys, file_path, rod_radius, rod_length, rod_density, box_height, box_width, box_thickness,
+    //                     friction_coefficient, cohesion);
+
+    load_rods_from_file(sys,
+                        file_path,
+                        box_height,
+                        rod_density,
+                        friction_coefficient,
+                        cohesion);
+
     // (ChSystemNSC& sys, std::string file_path, double rod_radius, double rod_length, double rod_density, double
     // box_height, double box_width, double box_thickness) Create the Irrlicht visualization system
     auto vis = chrono_types::make_shared<ChVisualSystemIrrlicht>();
@@ -513,17 +615,16 @@ int main(int argc, char* argv[]) {
             GetLog() << "modB: " << modB->GetPhysicsItem()->GetIdentifier() << '\n';
             GetLog() << "cforce: " << cforce << '\n';
             GetLog() << "ctorque: " << ctorque << '\n';
-            
+
             // GetLog() << "obj1: " << modA->GetPhysicsItem() << std::endl;
             // GetLog() << "obj2: " << modB->GetPhysicsItem() << std::endl;
-            
 
             return true;
         }
     };
 
     // Use the above callback to process each contact as it is created.
-    sys.GetContactContainer()->RegisterAddContactCallback(mycontact_callback);    
+    sys.GetContactContainer()->RegisterAddContactCallback(mycontact_callback);
     auto creporter = chrono_types::make_shared<ContactReporter>();
     // auto creporter = chrono_types::make_shared<ChContactContainer::ReportContactCallback>();
 
@@ -557,13 +658,12 @@ int main(int argc, char* argv[]) {
             // GetLog() << sys << "\n";
             // GetLog() << "pos: " << pos[0] << ", " << pos[1] << ", " << pos[2] << "\n";
             // TO DO: why burst happens?
-            id = sys.Get_bodylist()[0]->GetIdentifier(); 
+            id = sys.Get_bodylist()[0]->GetIdentifier();
             GetLog() << "id: " << id << "\n";
             sys.DoStepDynamics(0.01);
         }
     } else {  // no visualization
         while (sys.GetChTime() < simulation_time) {
-            
             // TO DO: write down callback function to get the position of the cylinder
             // TO DO: convert the quaternion to vector
 
@@ -577,16 +677,20 @@ int main(int argc, char* argv[]) {
             out_file << "ITEM: ATOMS id type x y z vx vy vz u1 u2 u3 u4 w1 w2 w3 fx fy fz tx ty tz\n";
             // Output particle data
             // out_file << "ITEM: ATOMS id type x y z vx vy vz fx fy fz\n";
-            for (int i = 0; i<sys.Get_bodylist().size(); i++) {
-                id = sys.Get_bodylist()[i]->GetIdentifier(); 
+            for (int i = 0; i < sys.Get_bodylist().size(); i++) {
+                id = sys.Get_bodylist()[i]->GetIdentifier();
                 pos = sys.Get_bodylist()[i]->GetPos();
                 vpos = sys.Get_bodylist()[i]->GetPos_dt();
                 rot = sys.Get_bodylist()[i]->GetRot();
                 vrot = sys.Get_bodylist()[i]->GetWvel_loc();
                 contact_force = sys.Get_bodylist()[i]->GetContactForce();
                 contact_torque = sys.Get_bodylist()[i]->GetContactTorque();
-                
-                out_file << id << " 1 " << pos[0] << " " << pos[1] << " " << pos[2] << " " << vpos[0] << " " << vpos[1] << " " << vpos[2] << " " << rot.e0() << " " << rot.e1() << " " << rot.e2() << " " << rot.e3() << " " << vrot[0] << " " << vrot[1] << " " << vrot[2] << " " << contact_force[0] << " " << contact_force[1] << " " << contact_force[2] << " " << contact_torque[0] << " " << contact_torque[1] << " " << contact_torque[2] << "\n";
+
+                out_file << id << " 1 " << pos[0] << " " << pos[1] << " " << pos[2] << " " << vpos[0] << " " << vpos[1]
+                         << " " << vpos[2] << " " << rot.e0() << " " << rot.e1() << " " << rot.e2() << " " << rot.e3()
+                         << " " << vrot[0] << " " << vrot[1] << " " << vrot[2] << " " << contact_force[0] << " "
+                         << contact_force[1] << " " << contact_force[2] << " " << contact_torque[0] << " "
+                         << contact_torque[1] << " " << contact_torque[2] << "\n";
             }
 
             // out_file << pos[0] << ", " << pos[1] << ", " << pos[2] << ", " << rot.e0() << ", " << rot.e1() << ", "
