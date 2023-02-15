@@ -103,4 +103,8 @@ build_chrono_website.sh
 refman.pdf
 src/chrono_granular/DoxyGenDocs/
 .DS_Store
+
+## outputs
 src/entanglement/output.txt
+output.txt
+output*.txt
