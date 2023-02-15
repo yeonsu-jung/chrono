@@ -32,6 +32,17 @@
 #include <sstream>
 #include <entanglement.h>
 
+// progress bar
+#include <chrono>
+
+void progress_bar(int progress, int total, const int barWidth) {    
+    int progressPercent = static_cast<int>(100.0 * progress / total);
+    int barProgress = static_cast<int>(barWidth * progress / total);
+    
+    std::cout << "\r" << "[" << std::string(barProgress, '=') << std::string(barWidth - barProgress, ' ') << "] " << progressPercent << "%";
+    std::cout.flush();
+}
+
 // Static values valid through the entire program (bad
 // programming practice, but enough for quick tests)
 
@@ -133,19 +144,14 @@ std::shared_ptr<ChBody> test_with_single_cylinder(ChSystemNSC& sys,
     return cyl;
 }
 
-void load_rods_from_file(ChSystemNSC& sys,
-                         std::string file_path,
-                         double rod_radius,
-                         double rod_length,
-                         double rod_density,
-                         double box_height,
-                         double box_width,
-                         double box_thickness,
-                         double friction_coefficient,
-                         double cohesion) {
-    // std::string file_path =
-    // "C:/Users/yjung/Documents/GitHub/generate_random_rods/RandomRods_[Alpha38_R15.200000000000001_H15.200000000000001_L15.20000000000001_A0.20_N119_Date2023-02-11_18-14-41].csv";
-    // file_path = "/Users/yeonsu/Documents/github/generate_random_rods/test.csv";
+void load_rods_from_file(ChSystemNSC& sys, std::string file_path, double& box_height, double rod_density, double friction_coefficient, double cohesion, double& alpha) {    
+    double rod_radius;
+    double rod_length;
+    double container_radius;
+    double container_height;
+    int num_rods;
+    std::string generated_time;
+
     auto mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
     mat->SetFriction(friction_coefficient);
     mat->SetCohesion(cohesion);
@@ -399,8 +405,27 @@ int main(int argc, char* argv[]) {
     // auto cyl = chrono_types::make_shared<ChBody>(); // tricky...
     // cyl = test_with_single_cylinder(sys);
     // cyl = test_with_single_cylinder(sys);
-    load_rods_from_file(sys, file_path, rod_radius, rod_length, rod_density, box_height, box_width, box_thickness,
-                        friction_coefficient, cohesion);
+    // load_rods_from_file(sys, file_path, rod_radius, rod_length, rod_density, box_height, box_width, box_thickness,
+    //                     friction_coefficient, cohesion);
+
+    load_rods_from_file(sys,
+                        file_path,
+                        box_height,
+                        rod_density,
+                        friction_coefficient,
+                        cohesion,
+                        alpha);
+
+    // box_height = box_width;
+    // box_width = rod_length*3;
+    box_width = box_height;
+    
+
+    ChVector<> camera_position(0, box_height/8, -box_height);
+    
+    std::shared_ptr<chrono::ChBody> floorBody;
+    floorBody = create_walls(sys, box_width, box_height, box_thickness, rod_density, friction_coefficient, cohesion);
+
     // (ChSystemNSC& sys, std::string file_path, double rod_radius, double rod_length, double rod_density, double
     // box_height, double box_width, double box_thickness) Create the Irrlicht visualization system
     auto vis = chrono_types::make_shared<ChVisualSystemIrrlicht>();
@@ -504,9 +529,30 @@ int main(int argc, char* argv[]) {
     auto creporter = chrono_types::make_shared<ContactReporter>();
     // auto creporter = chrono_types::make_shared<ChContactContainer::ReportContactCallback>();
 
-    // Simulation loop
+    size_t found = file_path.find_last_of("/\\");
+    std::string file_name = file_path.substr(found + 1);
+    std::string file_name_no_ext = file_name.substr(0, file_name.find_last_of("."));
+    
+    std::string tStepString = std::to_string(time_step*1000);
+    size_t dotPos = tStepString.find('.');
+    if (dotPos != std::string::npos) {
+        tStepString = tStepString.substr(0, dotPos + 3);
+    }
+
+    std::string simTimeString = std::to_string(time_step*1000);
+    dotPos = simTimeString.find('.');
+    if (dotPos != std::string::npos) {
+        simTimeString = simTimeString.substr(0, dotPos + 3);
+    }
+
+    std::string alphaString = std::to_string(alpha);
+    dotPos = alphaString.find('.');
+    if (dotPos != std::string::npos) {
+        alphaString = alphaString.substr(0, dotPos + 3);
+    }
+
     std::ofstream out_file;
-    out_file.open("output.txt");
+    out_file.open("output_alpha" + alphaString + "_"+ file_name_no_ext + "_" + "tstep_" + tStepString + "simtime_" + simTimeString + ".txt");
 
     // if (!out_file.is_open()) {
     //     GetLog() << "Unable to open file" << std::endl;
@@ -538,15 +584,12 @@ int main(int argc, char* argv[]) {
             rot = sys.Get_bodylist()[50]->GetRot();
             // TO DO: write down callback function to get the position of the cylinder
             // TO DO: convert the quaternion to vector
-
             contact_force = sys.Get_bodylist()[50]->GetContactForce();
             contact_torque = sys.Get_bodylist()[50]->GetContactTorque();
-
             sys.GetContactContainer()->ReportAllContacts(creporter);
             GetLog() << "id: " << id << "\n";
             GetLog() << "pos: " << pos[0] << ", " << pos[1] << ", " << pos[2] << "\n";
             GetLog() << "rot: " << rot.e0() << ", " << rot.e1() << ", " << rot.e2() << ", " << rot.e3() << "\n";
-            GetLog() << "contact force: " << contact_force[0] << ", " << contact_force[1] << ", " << contact_force[2]
                      << "\n";
             GetLog() << "contact torque: " << contact_torque[0] << ", " << contact_torque[1] << ", "
                      << contact_torque[2] << "\n";
