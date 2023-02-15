@@ -10,6 +10,7 @@
 
 option(ENABLE_MODULE_IRRLICHT "Enanble Irrlicht module" ON)
 option(BUILD_ENTANGLEMENT "Entanglement simulation" ON)
+option(BUILD_ENTANGLEMENT_FEA "Entanglement FEA simulation" ON)
 option(BUILD_YJUNG "Yeonsu Jung's addition" OFF)
 option(BUILD_DEMOS "Build demo programs" OFF)
 option(BUILD_BENCHMARKING "Build benchmark tests" OFF)
@@ -671,6 +672,10 @@ add_subdirectory(chrono_models)
 
 if(BUILD_ENTANGLEMENT)
   add_subdirectory(entanglement)
+endif()
+
+if(BUILD_ENTANGLEMENT_FEA)
+  add_subdirectory(entanglement_fea)
 endif()
 
 # Add directories for demo programs, unit test programs, and benchmark test programs.
