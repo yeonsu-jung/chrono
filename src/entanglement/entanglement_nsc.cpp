@@ -221,13 +221,7 @@ void load_rods_from_file(ChSystemNSC& sys, std::string file_path, double& box_he
             v[i] = std::stod(substr);
         }
 
-        auto rod = chrono_types::make_shared<ChBodyEasyCylinder>(rod_radius,
-                                                                rod_length,
-                                                                rod_density,
-                                                                true,
-                                                                true,
-                                                                mat,
-                                                                chrono_types::make_shared<collision::ChCollisionModelBullet>());
+        auto rod = chrono_types::make_shared<ChBodyEasyCylinder>(rod_radius, rod_length, rod_density, true, true, mat);
         double local_factor = 1;
         rod->SetPos(ChVector<>((v[0] + v[3]) / 2 * local_factor,
                                (v[2] + v[5]) / 2 * local_factor - box_height/2+ rod_radius*5,
@@ -436,8 +430,7 @@ void parsing_inputs_from_file(int& num_rods,
                               double& friction_coefficient,
                               double& cohesion,
                               bool& visualize,
-                              double& simulation_time,
-                              double& time_step) {
+                              double& simulation_time) {
     std::ifstream file("C:/Users/yjung/Documents/GitHub/chrono/build/bin/Release/inputs.txt");
     // std::ifstream file("/Users/yeonsu/Documents/github/chrono/build/bin/inputs.txt");
     // std::ifstream file("./inputs.txt");
@@ -472,22 +465,20 @@ void parsing_inputs_from_file(int& num_rods,
             iss >> visualize;
         } else if (key == "simulation_time") {
             iss >> simulation_time;
-        } else if (key == "time_step") {
-            iss >> time_step;
         }
     }
 }
 // you are amazing copilot!
 
-// double avg2(std::vector<double> const& v) {
-//     int n = 0;
-//     double mean = 0.0;
-//     for (auto x : v) {
-//         double delta = x - mean;
-//         mean += delta/++n;
-//     }
-//     return mean;
-// }
+double avg2(std::vector<double> const& v) {
+    int n = 0;
+    double mean = 0.0;
+    for (auto x : v) {
+        double delta = x - mean;
+        mean += delta/++n;
+    }
+    return mean;
+}
 
 int main(int argc, char* argv[]) {
     GetLog() << "Copyright (c) 2017 projectchrono.org\nChrono version: " << CHRONO_VERSION << "\n\n";
@@ -506,10 +497,9 @@ int main(int argc, char* argv[]) {
     std::string file_path = "";
     bool visualize = false;
     double simulation_time = 1;
-    double time_step = 0.01;
 
     parsing_inputs_from_file(num_rods, rod_length, rod_radius, rod_density, box_width, box_height, box_thickness,
-                             factor, file_path, friction_coefficient, cohesion, visualize, simulation_time,time_step);
+                             factor, file_path, friction_coefficient, cohesion, visualize, simulation_time);
     std::cout << "num_rods: " << num_rods << std::endl;
     std::cout << "rod_length: " << rod_length << std::endl;
     std::cout << "rod_radius: " << rod_radius << std::endl;
@@ -522,7 +512,6 @@ int main(int argc, char* argv[]) {
     std::cout << "cohesion: " << cohesion << std::endl;
     std::cout << "visualize: " << visualize << std::endl;
     std::cout << "simulation_time: " << simulation_time << std::endl;
-    std::cout << "time_step: " << time_step << std::endl;
    
 
     // void load_rods_from_file(ChSystemNSC& sys, std::string file_path, double rod_radius, double rod_length, double
@@ -685,19 +674,15 @@ int main(int argc, char* argv[]) {
             // TO DO: why burst happens?
             // id = sys.Get_bodylist()[0]->GetIdentifier();
             // GetLog() << "id: " << id << "\n";
+            std::vector<double> y_pos;
+            for (int i = 5; i < sys.Get_bodylist().size(); i++) {                
+                pos = sys.Get_bodylist()[i]->GetPos();
+                y_pos.push_back(pos[1]);
+            }
 
-            GetLog() << "time: " << sys.GetChTime() << '\n';            
-            GetLog() << "Number of contacts: " << sys.GetNcontacts() << '\n';
+            GetLog() << "average y: " << avg2(y_pos) << "\n";
 
-            // std::vector<double> y_pos;
-            // for (int i = 5; i < sys.Get_bodylist().size(); i++) {                
-            //     pos = sys.Get_bodylist()[i]->GetPos();
-            //     y_pos.push_back(pos[1]);
-            // }
-
-            // GetLog() << "average y: " << avg2(y_pos) << "\n";
-
-            sys.DoStepDynamics(time_step);
+            sys.DoStepDynamics(0.01);
         }
     } else {  // no visualization
         while (sys.GetChTime() < simulation_time) {
@@ -706,7 +691,6 @@ int main(int argc, char* argv[]) {
 
             // Output header lines
             GetLog() << "time: " << sys.GetChTime() << '\n';
-            GetLog() << "Number of contacts: " << sys.GetNcontacts() << '\n';
 
             out_file << "ITEM: TIMESTEP\n" << sys.GetChTime() << "\n";
             out_file << "ITEM: NUMBER OF ATOMS\n" << sys.Get_bodylist().size() << "\n";  // is this necessary?
@@ -743,7 +727,7 @@ int main(int argc, char* argv[]) {
             //          << "\n";
             // GetLog() << "contact torque: " << contact_torque[0] << ", " << contact_torque[1] << ", "
             //          << contact_torque[2] << "\n";
-            sys.DoStepDynamics(time_step);
+            sys.DoStepDynamics(0.01);
         }
     }
     out_file.close();

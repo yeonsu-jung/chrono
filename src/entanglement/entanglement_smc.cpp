@@ -26,12 +26,17 @@
 #include "chrono/physics/ChSystemNSC.h"
 #include "chrono_irrlicht/ChVisualSystemIrrlicht.h"
 
+#include "chrono/physics/ChSystemSMC.h"
+#include "chrono/physics/ChContactContainerSMC.h"
+
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <entanglement.h>
 #include <vector>
+
+collision::ChCollisionSystemType collision_type = collision::ChCollisionSystemType::BULLET;
 
 // Static values valid through the entire program (bad
 // programming practice, but enough for quick tests)
@@ -115,14 +120,16 @@
 // };
 
 // std::shared_ptr<ChBody>
-std::shared_ptr<ChBody> test_with_single_cylinder(ChSystemNSC& sys,
+std::shared_ptr<ChBody> test_with_single_cylinder(ChSystemSMC& sys,
                                                   double rod_radius,
                                                   double rod_length,
                                                   double rod_density) {
-    auto mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
+    // auto mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
+    auto mat = chrono_types::make_shared<ChMaterialSurfaceSMC>();
     mat->SetFriction(0.4f);
-    mat->SetRollingFriction(0.05f);  // what value?
-    mat->SetCohesion(0.8f);
+    mat->SetRollingFriction(0.4f);
+    // mat->SetRollingFriction(0.05f);  // what value?
+    mat->SetAdhesion(0.8f);
 
     auto cyl =
         chrono_types::make_shared<ChBodyEasyCylinder>(rod_radius, rod_length, rod_density, true, true, mat,
@@ -134,7 +141,7 @@ std::shared_ptr<ChBody> test_with_single_cylinder(ChSystemNSC& sys,
     return cyl;
 }
 
-void load_rods_from_file(ChSystemNSC& sys, std::string file_path, double& box_height, double rod_density, double friction_coefficient, double cohesion) {
+void load_rods_from_file(ChSystemSMC& sys, std::string file_path, double& box_height, double rod_density, double friction_coefficient, double cohesion) {
     double alpha;
     double rod_radius;
     double rod_length;
@@ -143,9 +150,12 @@ void load_rods_from_file(ChSystemNSC& sys, std::string file_path, double& box_he
     int num_rods;
     std::string generated_time;
 
-    auto mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
+    // auto mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
+    auto mat = chrono_types::make_shared<ChMaterialSurfaceSMC>();
     mat->SetFriction(friction_coefficient);
-    mat->SetCohesion(cohesion);
+    mat->SetRollingFriction(friction_coefficient);
+    // mat->SetCohesion(cohesion);
+    mat->SetAdhesion(0);
     std::cout << "Loading rods from file: " << file_path << std::endl;
 
     std::ifstream myFile;
@@ -221,13 +231,7 @@ void load_rods_from_file(ChSystemNSC& sys, std::string file_path, double& box_he
             v[i] = std::stod(substr);
         }
 
-        auto rod = chrono_types::make_shared<ChBodyEasyCylinder>(rod_radius,
-                                                                rod_length,
-                                                                rod_density,
-                                                                true,
-                                                                true,
-                                                                mat,
-                                                                chrono_types::make_shared<collision::ChCollisionModelBullet>());
+        auto rod = chrono_types::make_shared<ChBodyEasyCylinder>(rod_radius, rod_length, rod_density, true, true, mat);
         double local_factor = 1;
         rod->SetPos(ChVector<>((v[0] + v[3]) / 2 * local_factor,
                                (v[2] + v[5]) / 2 * local_factor - box_height/2+ rod_radius*5,
@@ -249,7 +253,7 @@ void load_rods_from_file(ChSystemNSC& sys, std::string file_path, double& box_he
     }
 }
 
-void load_rods_from_file(ChSystemNSC& sys,
+void load_rods_from_file(ChSystemSMC& sys,
                          std::string file_path,
                          double rod_radius,
                          double rod_length,
@@ -263,9 +267,14 @@ void load_rods_from_file(ChSystemNSC& sys,
     // "C:/Users/yjung/Documents/GitHub/generate_random_rods/RandomRods_[Alpha38_R15.200000000000001_H15.200000000000001_L15.20000000000001_A0.20_N119_Date2023-02-11_18-14-41].csv";
     // file_path = "/Users/yeonsu/Documents/github/generate_random_rods/test.csv";
     // file_path = "C:/Users/yjung/Documents/GitHub/generate_random_rods/test.csv"
-    auto mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
+    // auto mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
+    auto mat = chrono_types::make_shared<ChMaterialSurfaceSMC>();
     mat->SetFriction(friction_coefficient);
-    mat->SetCohesion(cohesion);
+    // mat->SetCohesion(cohesion);
+    mat->SetAdhesion(0);
+    mat->SetRollingFriction(0.4f);
+    mat->SetRestitution(0);
+    
     std::cout << "Loading rods from file: " << file_path << std::endl;
 
     std::ifstream myFile;
@@ -324,7 +333,7 @@ void load_rods_from_file(ChSystemNSC& sys,
     }
 }
 
-void create_some_falling_items(ChSystemNSC& sys,
+void create_some_falling_items(ChSystemSMC& sys,
                                int num_rods,
                                double rod_radius,
                                double rod_length,
@@ -337,9 +346,14 @@ void create_some_falling_items(ChSystemNSC& sys,
     ChCollisionModel::SetDefaultSuggestedEnvelope(0.3);
 
     // Shared contact material for falling objects
-    auto obj_mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
+    // auto obj_mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
+    auto obj_mat = chrono_types::make_shared<ChMaterialSurfaceSMC>();
     obj_mat->SetFriction(0.4f);
-    obj_mat->SetCohesion(0.8f);
+    // mat->SetFriction(friction_coefficient);
+    // mat->SetCohesion(cohesion);
+    obj_mat->SetAdhesion(0);
+    obj_mat->SetRollingFriction(0.4f);
+    obj_mat->SetRestitution(0);
 
     for (int bi = 0; bi < num_rods; bi++) {
         // Create a bunch of ChronoENGINE rigid bodies which will fall..
@@ -365,7 +379,7 @@ void create_some_falling_items(ChSystemNSC& sys,
     }
 }
 
-void create_walls(ChSystemNSC& sys,
+void create_walls(ChSystemSMC& sys,
                   double box_width,
                   double box_height,
                   double box_thickness,
@@ -373,9 +387,14 @@ void create_walls(ChSystemNSC& sys,
                   double friction_coefficient,
                   double cohesion) {
     // Contact and visualization materials for container
-    auto ground_mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
+    // auto ground_mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
+    auto ground_mat = chrono_types::make_shared<ChMaterialSurfaceSMC>();
     ground_mat->SetFriction(friction_coefficient);
-    ground_mat->SetCohesion(cohesion);
+    ground_mat->SetRollingFriction(0.4f);
+    // mat->SetCohesion(cohesion);
+    ground_mat->SetAdhesion(0);
+    ground_mat->SetRestitution(0);
+
     auto ground_mat_vis = chrono_types::make_shared<ChVisualMaterial>(*ChVisualMaterial::Default());
     ground_mat_vis->SetKdTexture(GetChronoDataFile("textures/concrete.jpg"));
 
@@ -436,8 +455,7 @@ void parsing_inputs_from_file(int& num_rods,
                               double& friction_coefficient,
                               double& cohesion,
                               bool& visualize,
-                              double& simulation_time,
-                              double& time_step) {
+                              double& simulation_time) {
     std::ifstream file("C:/Users/yjung/Documents/GitHub/chrono/build/bin/Release/inputs.txt");
     // std::ifstream file("/Users/yeonsu/Documents/github/chrono/build/bin/inputs.txt");
     // std::ifstream file("./inputs.txt");
@@ -472,22 +490,20 @@ void parsing_inputs_from_file(int& num_rods,
             iss >> visualize;
         } else if (key == "simulation_time") {
             iss >> simulation_time;
-        } else if (key == "time_step") {
-            iss >> time_step;
         }
     }
 }
 // you are amazing copilot!
 
-// double avg2(std::vector<double> const& v) {
-//     int n = 0;
-//     double mean = 0.0;
-//     for (auto x : v) {
-//         double delta = x - mean;
-//         mean += delta/++n;
-//     }
-//     return mean;
-// }
+double avg2(std::vector<double> const& v) {
+    int n = 0;
+    double mean = 0.0;
+    for (auto x : v) {
+        double delta = x - mean;
+        mean += delta/++n;
+    }
+    return mean;
+}
 
 int main(int argc, char* argv[]) {
     GetLog() << "Copyright (c) 2017 projectchrono.org\nChrono version: " << CHRONO_VERSION << "\n\n";
@@ -506,10 +522,9 @@ int main(int argc, char* argv[]) {
     std::string file_path = "";
     bool visualize = false;
     double simulation_time = 1;
-    double time_step = 0.01;
 
     parsing_inputs_from_file(num_rods, rod_length, rod_radius, rod_density, box_width, box_height, box_thickness,
-                             factor, file_path, friction_coefficient, cohesion, visualize, simulation_time,time_step);
+                             factor, file_path, friction_coefficient, cohesion, visualize, simulation_time);
     std::cout << "num_rods: " << num_rods << std::endl;
     std::cout << "rod_length: " << rod_length << std::endl;
     std::cout << "rod_radius: " << rod_radius << std::endl;
@@ -522,14 +537,14 @@ int main(int argc, char* argv[]) {
     std::cout << "cohesion: " << cohesion << std::endl;
     std::cout << "visualize: " << visualize << std::endl;
     std::cout << "simulation_time: " << simulation_time << std::endl;
-    std::cout << "time_step: " << time_step << std::endl;
    
 
     // void load_rods_from_file(ChSystemNSC& sys, std::string file_path, double rod_radius, double rod_length, double
     // rod_density, double box_height, double box_width, double box_thickness) {
 
     // Create a ChronoENGINE physical system
-    ChSystemNSC sys;
+    // ChSystemNSC sys;
+    ChSystemSMC sys;
 
     // Create all the rigid bodies.
 
@@ -585,7 +600,9 @@ int main(int argc, char* argv[]) {
         virtual void OnAddContact(const collision::ChCollisionInfo& contactinfo,
                                   ChMaterialComposite* const material) override {
             // Downcast to appropriate composite material type
-            auto mat = static_cast<ChMaterialCompositeNSC* const>(material);
+            // auto mat = static_cast<ChMaterialCompositeNSC* const>(material);
+            auto mat = static_cast<ChMaterialCompositeSMC* const>(material);
+            
 
             // Set friction according to user setting:
             // mat->static_friction = GLOBAL_friction;
@@ -599,10 +616,10 @@ int main(int argc, char* argv[]) {
             // Note that we must scale the cohesion force value by time step, because
             // the material 'cohesion' value has the dimension of an impulse.
             float my_cohesion_force = 0.4;
-            mat->cohesion = (float)msystem->GetStep() * my_cohesion_force;  //<- all contacts will have this cohesion!
+            // mat->cohesion = (float)msystem->GetStep() * my_cohesion_force;  //<- all contacts will have this cohesion!
 
-            if (contactinfo.distance > 0.12)
-                mat->cohesion = 0;
+            // if (contactinfo.distance > 0.12)
+            //     mat->cohesion = 0;
 
             // Note that here you might decide to modify the cohesion
             // depending on object sizes, type, time, position, etc. etc.
@@ -613,7 +630,7 @@ int main(int argc, char* argv[]) {
         // virtual void OnReportContact() override {
         //     GetLog() << "OnReportContact" << std::endl;
         // };
-        ChSystemNSC* msystem;
+        ChSystemSMC* msystem;
     };
 
     auto mycontact_callback = chrono_types::make_shared<MyContactCallback>();  // create the callback object
@@ -685,19 +702,15 @@ int main(int argc, char* argv[]) {
             // TO DO: why burst happens?
             // id = sys.Get_bodylist()[0]->GetIdentifier();
             // GetLog() << "id: " << id << "\n";
+            std::vector<double> y_pos;
+            for (int i = 5; i < sys.Get_bodylist().size(); i++) {                
+                pos = sys.Get_bodylist()[i]->GetPos();
+                y_pos.push_back(pos[1]);
+            }
 
-            GetLog() << "time: " << sys.GetChTime() << '\n';            
-            GetLog() << "Number of contacts: " << sys.GetNcontacts() << '\n';
+            GetLog() << "average y: " << avg2(y_pos) << "\n";
 
-            // std::vector<double> y_pos;
-            // for (int i = 5; i < sys.Get_bodylist().size(); i++) {                
-            //     pos = sys.Get_bodylist()[i]->GetPos();
-            //     y_pos.push_back(pos[1]);
-            // }
-
-            // GetLog() << "average y: " << avg2(y_pos) << "\n";
-
-            sys.DoStepDynamics(time_step);
+            sys.DoStepDynamics(0.01);
         }
     } else {  // no visualization
         while (sys.GetChTime() < simulation_time) {
@@ -706,7 +719,6 @@ int main(int argc, char* argv[]) {
 
             // Output header lines
             GetLog() << "time: " << sys.GetChTime() << '\n';
-            GetLog() << "Number of contacts: " << sys.GetNcontacts() << '\n';
 
             out_file << "ITEM: TIMESTEP\n" << sys.GetChTime() << "\n";
             out_file << "ITEM: NUMBER OF ATOMS\n" << sys.Get_bodylist().size() << "\n";  // is this necessary?
@@ -743,7 +755,7 @@ int main(int argc, char* argv[]) {
             //          << "\n";
             // GetLog() << "contact torque: " << contact_torque[0] << ", " << contact_torque[1] << ", "
             //          << contact_torque[2] << "\n";
-            sys.DoStepDynamics(time_step);
+            sys.DoStepDynamics(0.01);
         }
     }
     out_file.close();

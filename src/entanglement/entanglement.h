@@ -12,40 +12,77 @@ using namespace chrono;
 using namespace chrono::collision;
 using namespace chrono::irrlicht;
 
-// std::shared_ptr<ChBody> test_with_single_cylinder(ChSystemNSC& sys);
+#include "chrono/assets/ChTexture.h"
+#include "chrono/physics/ChBodyEasy.h"
+#include "chrono/physics/ChLinkMotorRotationSpeed.h"
+#include "chrono/physics/ChSystemNSC.h"
+#include "chrono_irrlicht/ChVisualSystemIrrlicht.h"
 
-// class MyContactCallback : public ChContactContainer::AddContactCallback {
-//     public:
-//     virtual void OnAddContact(const collision::ChCollisionInfo& contactinfo,
-//                                 ChMaterialComposite* const material) override {
-//         // Downcast to appropriate composite material type
-//         auto mat = static_cast<ChMaterialCompositeNSC* const>(material);
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <entanglement.h>
+#include <vector>
 
-//         // Set friction according to user setting:
-//         mat->static_friction = GLOBAL_friction;
+// class EntanglementSystem : public ChSystem {
+//   public:
+//     EntanglementSystem() : ChSystemNSC() {}
+//     virtual ~EntanglementSystem() {}
 
-//         // Set compliance (normal and tangential at once)
-//         mat->compliance = GLOBAL_compliance;
-//         mat->complianceT = GLOBAL_compliance;
-//         mat->dampingf = GLOBAL_dampingf;
+//     virtual void Update() override {
+//         // Update all auxiliary data
+//         ChSystemNSC::Update();
 
-//         // Set cohesion according to user setting:
-//         // Note that we must scale the cohesion force value by time step, because
-//         // the material 'cohesion' value has the dimension of an impulse.
-//         float my_cohesion_force = GLOBAL_cohesion;
-//         mat->cohesion = (float)msystem->GetStep() * my_cohesion_force;  //<- all contacts will have this cohesion!
+//         // Perform custom post-processing
+//         // ...
+//     }
 
-//         if (contactinfo.distance > 0.12)
-//             mat->cohesion = 0;
+//   protected:
+//     double alpha;
+//     double rod_radius;
+//     double rod_length;
+//     double container_radius;
+//     double container_height;
+//     int num_rods;
+//     std::string generated_time;
 
-//         // Note that here you might decide to modify the cohesion
-//         // depending on object sizes, type, time, position, etc. etc.
-//         // For example, after some time disable cohesion at all, just
-//         // add here:
-//         //    if (msystem->GetChTime() > 10) mat->cohesion = 0;
-//     };
-//     ChSystemNSC* msystem;
+//     double friction_coefficient;
+//     double cohesion;
+//     double box_height;
+//     double rod_density;
+//     std::string file_path;
+
+//     int num_rods = 1200;
+//     double factor = 1;
+//     double rod_radius = 0.2;
+//     double alpha = 50;1
+//     double rod_length = rod_radius * 2 * alpha;
+//     double rod_density = 8000;
+//     double box_height = 2 * rod_length;
+//     double box_width = 4 * rod_length;
+//     double box_thickness = 1;
+//     double friction_coefficient = 0.4;
+//     double cohesion = 0.4;
+//     std::string file_path = "";
+//     bool visualize = false;
+//     double simulation_time = 1;
+
+//     std::shared_ptr<ChBody> test_with_single_cylinder()
+//     void load_rods_from_file()
+//     void create_some_falling_items()
+//     void create_walls()
+//     void parsing_inputs_from_file()
 // };
 
 
+double avg2(std::vector<double> const& v) {
+    int n = 0;
+    double mean = 0.0;
+    for (auto x : v) {
+        double delta = x - mean;
+        mean += delta / ++n;
+    }
+    return mean;
+}
 #endif
