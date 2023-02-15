@@ -35,6 +35,17 @@
 #include <regex>
 #include <iomanip> 
 
+// progress bar
+#include <chrono>
+
+void progress_bar(int progress, int total, const int barWidth) {    
+    int progressPercent = static_cast<int>(100.0 * progress / total);
+    int barProgress = static_cast<int>(barWidth * progress / total);
+    
+    std::cout << "\r" << "[" << std::string(barProgress, '=') << std::string(barWidth - barProgress, ' ') << "] " << progressPercent << "%";
+    std::cout.flush();
+}
+
 // Static values valid through the entire program (bad
 // programming practice, but enough for quick tests)
 
@@ -136,8 +147,7 @@ std::shared_ptr<ChBody> test_with_single_cylinder(ChSystemNSC& sys,
     return cyl;
 }
 
-void load_rods_from_file(ChSystemNSC& sys, std::string file_path, double& box_height, double rod_density, double friction_coefficient, double cohesion) {
-    double alpha;
+void load_rods_from_file(ChSystemNSC& sys, std::string file_path, double& box_height, double rod_density, double friction_coefficient, double cohesion, double& alpha) {    
     double rod_radius;
     double rod_length;
     double container_radius;
@@ -570,7 +580,8 @@ int main(int argc, char* argv[]) {
                         box_height,
                         rod_density,
                         friction_coefficient,
-                        cohesion);
+                        cohesion,
+                        alpha);
 
     // box_height = box_width;
     // box_width = rod_length*3;
@@ -699,8 +710,14 @@ int main(int argc, char* argv[]) {
         simTimeString = simTimeString.substr(0, dotPos + 3);
     }
 
+    std::string alphaString = std::to_string(alpha);
+    dotPos = alphaString.find('.');
+    if (dotPos != std::string::npos) {
+        alphaString = alphaString.substr(0, dotPos + 3);
+    }
+
     std::ofstream out_file;
-    out_file.open("output_" + file_name_no_ext + "" + "tstep_" + tStepString + "simtime_" + simTimeString + ".txt");
+    out_file.open("output_alpha" + alphaString + "_"+ file_name_no_ext + "_" + "tstep_" + tStepString + "simtime_" + simTimeString + ".txt");
 
     // if (!out_file.is_open()) {
     //     GetLog() << "Unable to open file" << std::endl;
@@ -753,10 +770,11 @@ int main(int argc, char* argv[]) {
         while (sys.GetChTime() < simulation_time) {
             // TO DO: write down callback function to get the position of the cylinder
             // TO DO: convert the quaternion to vector
-
-            // Output header lines
-            GetLog() << "time: " << sys.GetChTime() << '\n';
-            GetLog() << "Number of contacts: " << sys.GetNcontacts() << '\n';
+            
+            // GetLog() << '\r' << "time: " << sys.GetChTime() << '\n';
+            // GetLog() << "Number of contacts: " << sys.GetNcontacts() << '\n';
+            std::cout << "\r" << "time: " << sys.GetChTime() << '\t' << "Number of contacts: " << sys.GetNcontacts();
+            
 
             out_file << "ITEM: TIMESTEP\n" << sys.GetChTime() << "\n";
             out_file << "ITEM: NUMBER OF ATOMS\n" << sys.Get_bodylist().size() << "\n";  // is this necessary?
