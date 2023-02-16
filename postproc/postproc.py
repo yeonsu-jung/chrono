@@ -46,7 +46,7 @@ def parse_lammps_dump_file(filename):
         fields = line.split()
         data.append([my_float(field) for field in fields])
 
-    arr = np.array(data)
+    arr = np.ndarray(data)
 
     return arr, column_names, timesteps, num_atoms
 # %%
@@ -60,8 +60,10 @@ N = int(np.max(arr.shape)/num_atoms)
 num_time_steps = len(timesteps)
 assert(N == num_time_steps)
 # %%
-print(N,num_atoms*num_time_steps)
+arr.shape
 
+# %%
+print(N,num_time_steps)
 
 # %%
 arr2 = np.reshape(arr, (num_time_steps, num_atoms, num_columns))
