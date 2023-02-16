@@ -1,0 +1,11 @@
+name: chrono_postproc
+channels:
+  - defaults
+dependencies:
+  - python=3.9
+  - numpy
+  - pandas
+  - matplotlib
+  - jupyter
+  - h5py  
+  - scipy
