@@ -51,22 +51,22 @@ def parse_lammps_dump_file(filename):
     return arr, column_names, timesteps, num_atoms
 # %%
 # Example usage: parse a LAMMPS plain-text dump file into a NumPy array and extract the simulation time
-arr, column_names, timesteps, num_atoms = parse_lammps_dump_file('C:/Users/yjung/Documents/GitHub/chrono/build/bin/Debug/output.txt')
+# arr, column_names, timesteps, num_atoms = parse_lammps_dump_file('C:/Users/yjung/Documents/GitHub/chrono/build/bin/Debug/output.txt')
+arr, column_names, timesteps, num_atoms = parse_lammps_dump_file('/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha76.0_RandomRods_Alpha76_N238_Date2023-02-14_23-24-30_tstep_0.50simtime_0.50/sim_data.txt')
 # print(f"Simulation time: {timestep}")
 # %%
 num_columns = np.min(arr.shape)
 N = int(np.max(arr.shape)/num_atoms)
 num_time_steps = len(timesteps)
 assert(N == num_time_steps)
+# %%
+print(N,num_atoms*num_time_steps)
 
 
 # %%
 arr2 = np.reshape(arr, (num_time_steps, num_atoms, num_columns))
 
 # %%
-
-# %%
-
 fig = plt.figure(figsize = (8,8))
 ax = plt.axes(projection='3d')
 ax.grid()
@@ -87,16 +87,13 @@ ax.set_title('3D Parametric Plot')
 ax.set_xlabel('x', labelpad=20)
 ax.set_ylabel('y', labelpad=20)
 ax.set_zlabel('t', labelpad=20)
-
 plt.show()
 # %%
-
 qs = arr2[10,:,8:12]
 r_list = [Rotation.from_quat(q) for q in qs]
-
 rot_mat_list = [r.as_matrix() for r in r_list]
-
 print(rot_mat_list)
 # %%
 print(np.mean(arr2[1000,:,15:18]))
+
 # %%
