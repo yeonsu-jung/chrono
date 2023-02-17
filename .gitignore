@@ -108,3 +108,6 @@ src/chrono_granular/DoxyGenDocs/
 src/entanglement/output.txt
 output.txt
 output*.txt
+*.pov
+*.png
+*.pov
