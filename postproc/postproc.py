@@ -119,7 +119,7 @@ y_axis = (0.0, 1.0, 0.0)
 orientations = []
 for q in quaternions:
     rotated_y_axis = quaternion_vector_rotation(q, y_axis)
-    orientations.append(rotated_y_axis)
+    orientations.append(np.array(rotated_y_axis))
 # %%
 rod_length = 38*2
 rod_radius = 1
@@ -127,7 +127,7 @@ rod_radius = 1
 centroids = df[:,2:5]
 lines = []
 for i, c in enumerate(centroids):
-    lines.append( np.hstack((c + orientations[i]+rod_length/2,c - orientations[i]+rod_length/2)))
+    lines.append( np.hstack((c + orientations[i]*rod_length/2,c - orientations[i]*rod_length/2)))
 
 print(lines)
 # %%
@@ -141,9 +141,12 @@ fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 
 for line in lines:
+    print(line)
     xx = [line[0],line[3]]
     yy = [line[1],line[4]]
     zz = [line[2],line[5]]
     ax.plot(xx,yy,zz, color='k')
 
     
+
+# %%
