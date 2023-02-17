@@ -112,7 +112,7 @@ int main(int argc, char* argv[]) {
 ////#define LOAD_3
 ////#define LOAD_4
 #define LOAD_5
-////#define LOAD_6
+    ////#define LOAD_6
 
     GetLog() << "Appled loads: \n";
 

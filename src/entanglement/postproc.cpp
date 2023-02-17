@@ -806,89 +806,13 @@ int main(int argc, char* argv[]) {
             vis->Render();
             vis->EndScene();
 
-            // sys.assembly.Get_bodylist();
-
-            // pos = cyl->GetPos();
-            // GetLog() << sys << "\n";
-            // GetLog() << "pos: " << pos[0] << ", " << pos[1] << ", " << pos[2] << "\n";
-            // TO DO: why burst happens?
-            // id = sys.Get_bodylist()[0]->GetIdentifier();
-            // GetLog() << "id: " << id << "\n";
-
-            // GetLog() << "time: " << sys.GetChTime() << '\n';
-            // GetLog() << "Number of contacts: " << sys.GetNcontacts() << '\n';
-            
-            // GetLog() << "Excitation: " << sys.Get_G_acc() << '\n';
-
-            sys.Set_G_acc(ChVector<>(0, -9.8 + excitation_amplitude*cos( CH_C_2PI*excitation_frequency*sys.GetChTime()),0));
-            // floorBody->SetPos(ChVector<>(0, -box_height/2 + 10*rod_radius*cos( CH_C_2PI*excitation_frequency*sys.GetChTime()),0) );
-            std::cout << "\r" << "time: " << sys.GetChTime() << '\t' << "Number of contacts: " << sys.GetNcontacts();
-
-            // if (frame % 10 == 0) {
-            //     vis->WriteImageToFile(out_dir + "/img_" + std::to_string(frame) + ".png");
-            // }
-            // vis->WriteImageToFile(out_dir + "/img_" + std::to_string(frame) + ".png");
-            frame++;
-
             
 
-            // std::vector<double> y_pos;
-            // for (int i = 5; i < sys.Get_bodylist().size(); i++) {                
-            //     pos = sys.Get_bodylist()[i]->GetPos();
-            //     y_pos.push_back(pos[1]);
-            // }
-
-            // GetLog() << "average y: " << avg2(y_pos) << "\n";
 
             sys.DoStepDynamics(time_step);
         }
     } else {  // no visualization
-        while (sys.GetChTime() < simulation_time) {
-            // TO DO: write down callback function to get the position of the cylinder
-            // TO DO: convert the quaternion to vector
-            
-            // GetLog() << '\r' << "time: " << sys.GetChTime() << '\n';
-            // GetLog() << "Number of contacts: " << sys.GetNcontacts() << '\n';
-            sys.Set_G_acc(ChVector<>(0, -9.8 + excitation_amplitude*cos( CH_C_2PI*excitation_frequency*sys.GetChTime()),0));
-            // floorBody->SetPos(ChVector<>(0, -box_height/2 + 10*rod_radius*cos( CH_C_2PI*excitation_frequency*sys.GetChTime()),0) );
-            std::cout << "\r" << "time: " << sys.GetChTime() << '\t' << "Number of contacts: " << sys.GetNcontacts();
-            
-            out_file << "ITEM: TIMESTEP\n" << sys.GetChTime() << "\n";
-            out_file << "ITEM: NUMBER OF ATOMS\n" << sys.Get_bodylist().size() << "\n";  // is this necessary?
-            // out_file << "ITEM: BOX BOUNDS pp pp pp\n";
-            // out_file << "0 10\n0 10\n0 10\n";
-            out_file << "ITEM: ATOMS id type x y z vx vy vz u1 u2 u3 u4 w1 w2 w3 fx fy fz tx ty tz\n";
-            // Output particle data
-            // out_file << "ITEM: ATOMS id type x y z vx vy vz fx fy fz\n";
-            for (int i = 0; i < sys.Get_bodylist().size(); i++) {
-                id = sys.Get_bodylist()[i]->GetIdentifier();
-                pos = sys.Get_bodylist()[i]->GetPos();
-                vpos = sys.Get_bodylist()[i]->GetPos_dt();
-                rot = sys.Get_bodylist()[i]->GetRot();
-                vrot = sys.Get_bodylist()[i]->GetWvel_loc();
-                contact_force = sys.Get_bodylist()[i]->GetContactForce();
-                contact_torque = sys.Get_bodylist()[i]->GetContactTorque();
-
-                out_file << id << " 1 " << pos[0] << " " << pos[1] << " " << pos[2] << " " << vpos[0] << " " << vpos[1]
-                         << " " << vpos[2] << " " << rot.e0() << " " << rot.e1() << " " << rot.e2() << " " << rot.e3()
-                         << " " << vrot[0] << " " << vrot[1] << " " << vrot[2] << " " << contact_force[0] << " "
-                         << contact_force[1] << " " << contact_force[2] << " " << contact_torque[0] << " "
-                         << contact_torque[1] << " " << contact_torque[2] << "\n";
-            }
-
-            // out_file << pos[0] << ", " << pos[1] << ", " << pos[2] << ", " << rot.e0() << ", " << rot.e1() << ", "
-            //         << rot.e2() << ", " << rot.e3() << "\n";
-
-            // sys.GetContactContainer()->ReportAllContacts(creporter);
-
-            // GetLog() << "id: " << id << "\n";
-            // GetLog() << "pos: " << pos[0] << ", " << pos[1] << ", " << pos[2] << "\n";
-            // GetLog() << "rot: " << rot.e0() << ", " << rot.e1() << ", " << rot.e2() << ", " << rot.e3() << "\n";
-            // GetLog() << "contact force: " << contact_force[0] << ", " << contact_force[1] << ", " << contact_force[2]
-            //          << "\n";
-            // GetLog() << "contact torque: " << contact_torque[0] << ", " << contact_torque[1] << ", "
-            //          << contact_torque[2] << "\n";
-            sys.DoStepDynamics(time_step);
+        while (sys.GetChTime() < simulation_time) {            
         }
     }
     out_file.close();

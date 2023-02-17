@@ -9,6 +9,8 @@
 #-----------------------------------------------------------------------------
 
 option(ENABLE_MODULE_IRRLICHT "Enanble Irrlicht module" ON)
+option(ENABLE_MODULE_OPENGL "Enanble OpenGL module" OFF)
+
 option(BUILD_ENTANGLEMENT "Entanglement simulation" ON)
 option(BUILD_ENTANGLEMENT_FEA "Entanglement FEA simulation" ON)
 option(BUILD_YJUNG "Yeonsu Jung's addition" OFF)

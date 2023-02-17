@@ -142,7 +142,7 @@ if(ENABLE_MODULE_MULTICORE)
 endif()
 
 if(ENABLE_MODULE_OPENGL)
-	option(BUILD_DEMOS_OPENGL "Build demo programs for OpenGL module" OFF)
+	option(BUILD_DEMOS_OPENGL "Build demo programs for OpenGL module" TRUE)
 	mark_as_advanced(FORCE BUILD_DEMOS_OPENGL)
 	if(BUILD_DEMOS_OPENGL)
 		add_subdirectory(opengl)
