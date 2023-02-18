@@ -3,7 +3,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.spatial.transform import Rotation
-%matplotlib qt
+# %matplotlib qt
 
 # %%
 def my_float(field):
@@ -50,7 +50,6 @@ def parse_lammps_dump_file(filename, rows_to_read=100):
     # Read the file and extract the header and data lines
     # with open(filename) as f:
     #     lines = f.readlines()
-
     lines = []
     with open(filename) as f:
         for i in range(rows_to_read):
@@ -89,7 +88,6 @@ def parse_lammps_dump_file(filename, rows_to_read=100):
 
 # %% main
 import os
-
 rows_to_read = 300000
 # if system is windows
 if os.name == 'nt':
@@ -131,71 +129,64 @@ cylinder = Cylinder( [0,1,2], [0,10,2], 2, Texture( Pigment( 'color', [1,0,1] ))
 #            )"""
 
 scene = Scene( camera, objects= [light, cylinder])
-scene.render("purple_sphere.png", width=400, height=300)
-
+scene.render('ipython', width=400, height=300)
+# %%
+# chunks
+print(lines[0],lines[num_atoms])
 
 # %%
-camera = Camera( 'location', np.mean(centroids,axis=0)+[0,0,-300], 'look_at', np.mean(centroids,axis=0))
-light = LightSource( np.mean(centroids,axis=0) + [200,400,-500], 'color', [1.2,1.2,1.2] )
-bgd = Background( "color", [1,1,1] )
-# sun = LightSource([1500,2500,-2500], 'color',1)
-
-# sky = Sphere(  [0,0,0],1, 'hollow',
-#               Texture(  Pigment(  'gradient', [0,1,0],
-#                                   ColorMap([0, 'color', 'White'],
-#                                            [1, 'color', 'Blue' ]),
-#                                   'quick_color', 'White'),
-#                         Finish( 'ambient', 1, 'diffuse', 0)),
-#               'scale', 10000)
-
-
-cylinders = []
-for line in lines:
-    xx = [line[0],line[3]]
-    yy = [line[1],line[4]]
-    zz = [line[2],line[5]]
-    base = [xx[0],yy[0],zz[0]]
-    cap = [xx[1],yy[1],zz[1]]
-    cylinders.append(Cylinder( base, cap, 1, Texture( Pigment( 'color', [1,0,1] ))))
-    # cylinders.append(Cylinder( base, cap, 1, Pigment('color', [0, 0, 1]),Finish('phong', 0.8,'reflection', 0.5)))
-    
-
-scene = Scene( camera, objects= [bgd,light,*cylinders])
-scene.render("ipython", width=800, height=600)
-
-# %%
-def scene(t):
-    """ Returns the scene at time 't' (in seconds) """
-    starting_point = int(t)*num_atoms
-    ending_point = starting_point+num_atoms    
-    tmp = lines[starting_point:ending_point]
+# repeat over chunks
+for i in range(0,1000,10):
+    starting_point = i*num_atoms
+    ending_point = (i+1)*num_atoms
     cylinders = []
-    for line in tmp:
-        xx = [line[0],line[3]]
-        yy = [line[1],line[4]]
-        zz = [line[2],line[5]]
-        base = [xx[0],yy[0],zz[0]]
-        cap = [xx[1],yy[1],zz[1]]
-        cylinders.append(Cylinder( base, cap, 1, Texture( Pigment( 'color', [1,0,1] ))))
+    for line in lines[starting_point:ending_point]:
+        camera = Camera( 'location', [0,-200,-400], 'look_at', [0,-200,2] )
+        light = LightSource( [2,4,-250], 'color', [1,1,1] )
+        # ground = Plane( [0,1,0], -400, Texture( Pigment( 'color', [1,1,1] )))
+        # wall = Plane( [0,0,1], +400, Texture( Pigment( 'color', [1.2,1.2,1.2] )))
+        bgd = Background( 'color', [1,1,1] )
+        base = line[:3]
+        cap = line[3:]
+        cylinders.append(Cylinder( base, cap, rod_radius, Texture( Pigment( 'color', [1,0,1] ))))
     
-    return Scene( camera, objects= [bgd,light,*cylinders])
-def make_frame(t,nm):
-    return scene(t).render(nm,width=800, height=600, antialiasing=0.001)
+    scene = Scene( camera, objects= [light, *cylinders, bgd])
+    scene.render(f'example3/img_{i:04d}.png', width=800, height=600, antialiasing=0.0001)
 
-# %%
-for i in range(0,1200,2):
-    make_frame(i,f"example2/img_{i}.png")
-# %%
-from moviepy.editor import VideoClip
 
-import os
+
+# # %%
+# import numpy as np
+# import cv2
+# # Set up the video writer
+# fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Codec to use
+
+# # fourcc = cv2.VideoWriter_fourcc('m','p','4','v')  # Codec to use
+# fps = 30  # Frames per second
+# width, height = 640, 480  # Frame size
+# out = cv2.VideoWriter('output.mp4', fourcc, fps, (width, height))
+
+# # Generate some example frames
+# for i in range(100):
+#     # Create a random color image
+#     img = np.random.randint(0, 256, (height, width, 3), dtype=np.uint8)
+#     # Write the frame to the video
+#     out.write(img)
+
+# # Release the video writer
+# out.release()
+
+# # %%
+# import os
 # os.environ["IMAGEIO_FFMPEG_EXE"] = "/Users/yeonsu/opt/anaconda3/envs/vis-space/bin/ffmpeg"
 
-VideoClip(make_frame, duration=4).write_videofile("anim.mp4",fps=1)
+# from moviepy.editor import VideoClip
+# VideoClip(make_frame, duration=4).write_videofile("anim.mp4",fps=1)
+# %%
+
 
 # %%
-os.environ["IMAGEIO_FFMPEG_EXE"] = "/Users/yeonsu/opt/anaconda3/envs/vis-space/bin/ffmpeg"
-os.environ["IMAGEIO_FFMPEG_EXE"]
+
 
 # # %%
 # # TO DO: write setup file
