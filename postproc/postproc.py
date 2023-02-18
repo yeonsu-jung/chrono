@@ -1,6 +1,5 @@
 # %%
 # TO DO: write setup file
-
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.spatial.transform import Rotation
@@ -28,8 +27,24 @@ class postproc:
         self.num_atoms = num_atoms
     
 
-    # %%
-# %%
+def quaternion_multiply(q1, q2):
+    w1, x1, y1, z1 = q1
+    w2, x2, y2, z2 = q2
+    w = w1*w2 - x1*x2 - y1*y2 - z1*z2
+    x = w1*x2 + x1*w2 + y1*z2 - z1*y2
+    y = w1*y2 - x1*z2 + y1*w2 + z1*x2
+    z = w1*z2 + x1*y2 - y1*x2 + z1*w2
+    return (w, x, y, z)
+
+def quaternion_conjugate(q):
+    w, x, y, z = q
+    return (w, -x, -y, -z)
+
+def quaternion_vector_rotation(q, v):
+    qv = (0.0, *v)
+    return quaternion_multiply(quaternion_multiply(q, qv), quaternion_conjugate(q))[1:]
+    # return quaternion_multiply(quaternion_multiply(q, qv), q)[1:]
+
 # Define a function to parse a LAMMPS plain-text dump file into a NumPy array
 def parse_lammps_dump_file(filename, rows_to_read=100):
     # Read the file and extract the header and data lines
@@ -75,36 +90,19 @@ def parse_lammps_dump_file(filename, rows_to_read=100):
 # %% main
 import os
 
+rows_to_read = 300000
 # if system is windows
 if os.name == 'nt':
-    data, column_names, timesteps, num_atoms = parse_lammps_dump_file('C:/Users/yjung/Dropbox (Harvard University)/Entangled/Sims/alpha76.0_RandomRods_Alpha76_N238_Date2023-02-14_23-24-30_tstep_0.50simtime_0.50/sim_data.txt')
+    data, column_names, timesteps, num_atoms = parse_lammps_dump_file('C:/Users/yjung/Dropbox (Harvard University)/Entangled/Sims/alpha76.0_RandomRods_Alpha76_N238_Date2023-02-14_23-24-30_tstep_0.50simtime_0.50/sim_data.txt',rows_to_read=rows_to_read)
 elif os.name == 'posix':
     data, column_names, timesteps, num_atoms = parse_lammps_dump_file('/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha76.0_RandomRods_Alpha76_N238_Date2023-02-14_23-24-30_tstep_0.50simtime_0.50/sim_data.txt', rows_to_read=300000)
 
+rod_length = 38*2
+rod_radius = 1
+
 df = np.array(data)
-df[:,2:5]
-df[:,8:12]
-
-def quaternion_multiply(q1, q2):
-    w1, x1, y1, z1 = q1
-    w2, x2, y2, z2 = q2
-    w = w1*w2 - x1*x2 - y1*y2 - z1*z2
-    x = w1*x2 + x1*w2 + y1*z2 - z1*y2
-    y = w1*y2 - x1*z2 + y1*w2 + z1*x2
-    z = w1*z2 + x1*y2 - y1*x2 + z1*w2
-    return (w, x, y, z)
-
-def quaternion_conjugate(q):
-    w, x, y, z = q
-    return (w, -x, -y, -z)
-
-def quaternion_vector_rotation(q, v):
-    qv = (0.0, *v)
-    return quaternion_multiply(quaternion_multiply(q, qv), quaternion_conjugate(q))[1:]
-    # return quaternion_multiply(quaternion_multiply(q, qv), q)[1:]
-
+centroids = df[:,2:5]
 quaternions = df[:,8:12]
-
 # Example y-axis vector
 y_axis = (0.0, 1.0, 0.0)
 
@@ -114,10 +112,6 @@ for q in quaternions:
     rotated_y_axis = quaternion_vector_rotation(q, y_axis)
     orientations.append(np.array(rotated_y_axis))
 
-rod_length = 38*2
-rod_radius = 1
-
-centroids = df[:,2:5]
 lines = []
 for i, c in enumerate(centroids):
     lines.append( np.hstack((c + orientations[i]*rod_length/2,c - orientations[i]*rod_length/2)))
