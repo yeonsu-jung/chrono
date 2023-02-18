@@ -11,6 +11,9 @@ def my_float(field):
         field = np.NaN
     return float(field)
 
+def my_float_list(list):
+    return [my_float(field) for field in list]
+
 def rearrange(data):
     num_columns = np.min(data.shape)
 
@@ -44,60 +47,147 @@ def quaternion_vector_rotation(q, v):
     qv = (0.0, *v)
     return quaternion_multiply(quaternion_multiply(q, qv), quaternion_conjugate(q))[1:]
     # return quaternion_multiply(quaternion_multiply(q, qv), q)[1:]
-
-# Define a function to parse a LAMMPS plain-text dump file into a NumPy array
-def parse_lammps_dump_file(filename, rows_to_read=100):
-    # Read the file and extract the header and data lines
-    # with open(filename) as f:
-    #     lines = f.readlines()
-    lines = []
+# %%
+def find_lines_between_two_flags(filename, flag1, flag2):
     with open(filename) as f:
-        for i in range(rows_to_read):
-            lines.append(f.readline())
+        # multiple checks?
+        found_first_flag = False
+        for i, line in enumerate(f):
+            if line.startswith(flag2) & found_first_flag:
+                end = i
+                break
+            if line.startswith(flag1):
+                found_first_flag = True
+                start = i
+    
+    return start, end
 
-    header_lines = [line for line in lines if line.startswith('ITEM: ATOMS')]
-    header_positions = [i for i,line in enumerate(lines) if line.startswith('ITEM: ATOMS')]
+fname = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha76.0_RandomRods_Alpha76_N238_Date2023-02-14_23-24-30_tstep_0.50simtime_0.50/sim_data.txt'
+find_lines_between_two_flags(fname, 'ITEM: ATOMS', 'ITEM: TIME')
+
+def read_next_line_after_flag(filename, flag):
+    with open(filename) as f:
+        while True:
+            line = f.readline()
+            if not line:
+                break
+            if line.startswith(flag):
+                return f.readline()
+
+# %%
+# Define a function to parse a LAMMPS plain-text dump file into a NumPy array
+def check_dump_file(filename):
+    # information about the dump file
+    # num of atoms
+    # range of time frame
+    # etc...
+    num_atoms = read_next_line_after_flag(filename, 'ITEM: NUMBER')
+    num_atoms = int(num_atoms)
+    row1, row2 = find_lines_between_two_flags(filename, 'ITEM: TIME', 'ITEM: TIME')
+                
+    with open(filename, 'rb') as f:
+        f.seek(0, 2)  # seek to the end of the file
+        total_num_rows = f.tell()
+
+    num_time_steps = int(total_num_rows/(row2-row1))
+    return num_atoms,num_time_steps
+
+check_dump_file('/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha76.0_RandomRods_Alpha76_N238_Date2023-02-14_23-24-30_tstep_0.50simtime_0.50/sim_data.txt')
+# %%
+def get_data_from_dump(filename,last_chunk,chunks_to_skip):
+    row1, row2 = find_lines_between_two_flags(filename, 'ITEM: TIME', 'ITEM: TIME')
+    num_rows_in_chunk = row2-row1
+    
+    slices = [(i*num_rows_in_chunk,i*num_rows_in_chunk+num_rows_in_chunk) for i in range(0,last_chunk,chunks_to_skip)]    
+    all_lines = []
+    with open(filename) as f:        
+        for i in range(slices[-1][1]):
+            all_lines.append(f.readline())
+    
+    chunks = []    
+    for (s1,s2) in slices:        
+        # print(all_lines[s1:s2])
+        chunks.append(all_lines[s1:s2])
+
+    return chunks
+        
+# %%
+def parse_lammps_dump_file(filename, start_chunk, end_chunk, rows_per_chunk):
+    with open(filename) as f:
+        lines = []
+        for i, line in enumerate(f):
+            if i // rows_per_chunk < start_chunk:
+                continue
+            elif i // rows_per_chunk >= end_chunk:
+                break
+            lines.append(line)
+
+    header_positions = [i for i, line in enumerate(lines) if line.startswith('ITEM: ATOMS')]
     last_header_position = header_positions[-1]
 
-    num_atoms = int([lines[i+1] for i,line in enumerate(lines) if line.startswith('ITEM: NUMBER')][0].split()[0])
+    num_atoms = int([lines[i+1] for i, line in enumerate(lines) if line.startswith('ITEM: NUMBER')][0].split()[0])
 
-    if (len(lines) - last_header_position != num_atoms + 1):
+    if len(lines) - last_header_position != num_atoms + 1:
         print("Last timestep is incomplete")
 
-    data_lines = [line for line in lines if (not line.startswith('ITEM:')) and line.find(' ') != -1]
-    timesteps = [float(lines[i+1].split()[0]) for i,line in enumerate(lines) if line.startswith('ITEM: TIME')]
-
-    # Extract the column names from the last header line
-    header_line = header_lines[-1].split()[2:]
-    column_names = ['id', 'type'] + header_line
-
-    # Extract the timestep value from the "ITEM: TIMESTEP" header line
-    # timestep_line = [line for line in lines if line.startswith('ITEM: TIMESTEP')]
-    # print(timestep_line)
-    # timestep = [line for line in lines if (not line.startswith('ITEM:')) and (line.find(' ') == -1)]    
-
-    # Parse the data lines into a NumPy array
+    timesteps = []
     data = []
-    for line in data_lines:
-        fields = line.split()
-        data.append([my_float(field) for field in fields])
+    for i, line in enumerate(lines):
+        if line.startswith('ITEM: ATOMS'):
+            header_line = line.split()[2:]
+            column_names = ['id', 'type'] + header_line
+        elif line.startswith('ITEM: NUMBER'):
+            num_atoms = int(line.split()[0])
+        elif line.startswith('ITEM: TIME'):
+            timesteps.append(float(lines[i+1].split()[0]))
+        elif not line.startswith('ITEM:'):
+            fields = line.split()
+            data.append([float(field) for field in fields])
 
-    # arr = np.array(data)
+    return np.array(data), column_names, timesteps, num_atoms
 
-    return data, column_names, timesteps, num_atoms
 
 # %% main
 import os
-rows_to_read = 300000
+
+rod_length = 38*2
+rod_radius = 1
+last_chunk = 10000
+chunks_to_skip = 10
+
 # if system is windows
 if os.name == 'nt':
     data, column_names, timesteps, num_atoms = parse_lammps_dump_file('C:/Users/yjung/Dropbox (Harvard University)/Entangled/Sims/alpha76.0_RandomRods_Alpha76_N238_Date2023-02-14_23-24-30_tstep_0.50simtime_0.50/sim_data.txt',rows_to_read=rows_to_read)
 elif os.name == 'posix':
-    data, column_names, timesteps, num_atoms = parse_lammps_dump_file('/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha76.0_RandomRods_Alpha76_N238_Date2023-02-14_23-24-30_tstep_0.50simtime_0.50/sim_data.txt', rows_to_read=300000)
+    # data, column_names, timesteps, num_atoms = parse_lammps_dump_file('/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha76.0_RandomRods_Alpha76_N238_Date2023-02-14_23-24-30_tstep_0.50simtime_0.50/sim_data.txt', rows_to_read=300000)
+    data_chunks = get_data_from_dump(fname,last_chunk,chunks_to_skip)
 
-rod_length = 38*2
-rod_radius = 1
+from vapory import *
 
+for i,chunk in enumerate(data_chunks):
+    df = [my_float_list(line.split()) for line in chunk[5:]]
+    df = np.array(df)
+
+    cylinders = []
+    for each_rod_data in df:
+        camera = Camera( 'location', [0,-200,-400], 'look_at', [0,-200,2] )
+        light = LightSource( [2,4,-250], 'color', [1,1,1] )
+        # ground = Plane( [0,1,0], -400, Texture( Pigment( 'color', [1,1,1] )))
+        # wall = Plane( [0,0,1], +400, Texture( Pigment( 'color', [1.2,1.2,1.2] )))
+        bgd = Background( 'color', [1,1,1] )
+        cen = each_rod_data[2:5]
+        quaterion = each_rod_data[8:12]
+        ori = quaternion_vector_rotation(quaterion, (0.0, 1.0, 0.0))
+        base = [cen[0]-ori[0]*rod_length/2, cen[1]-ori[1]*rod_length/2, cen[2]-ori[2]*rod_length/2]
+        cap = [cen[0]+ori[0]*rod_length/2, cen[1]+ori[1]*rod_length/2, cen[2]+ori[2]*rod_length/2]
+        
+        cylinders.append(Cylinder( base, cap, rod_radius, Texture( Pigment( 'color', [1,0,1] ))))
+
+    scene = Scene( camera, objects= [light, *cylinders, bgd])
+    scene.render(f'example3/img_{i:04d}.png', width=800, height=600, antialiasing=0.0001)
+
+
+# %%
 df = np.array(data)
 centroids = df[:,2:5]
 quaternions = df[:,8:12]
