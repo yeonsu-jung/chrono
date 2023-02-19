@@ -34,7 +34,7 @@
 #include <vector>
 #include <regex>
 #include <iomanip> 
-#include <direct.h>
+#include <direct.h> // windows
 
 std::string createNumberedDirectory(const std::string& dirPath, const std::string& dirName)
 {
@@ -823,6 +823,24 @@ int main(int argc, char* argv[]) {
             sys.Set_G_acc(ChVector<>(0, -9.8 + excitation_amplitude*cos( CH_C_2PI*excitation_frequency*sys.GetChTime()),0));
             // floorBody->SetPos(ChVector<>(0, -box_height/2 + 10*rod_radius*cos( CH_C_2PI*excitation_frequency*sys.GetChTime()),0) );
             std::cout << "\r" << "time: " << sys.GetChTime() << '\t' << "Number of contacts: " << sys.GetNcontacts();
+            Get every contact info
+            for (int i = 0; i < sys.GetNcontacts(); i++) {
+                auto contact = sys.GetContact(i);
+                auto body1 = std::static_pointer_cast<ChBody>(contact->GetContactableA());
+                auto body2 = std::static_pointer_cast<ChBody>(contact->GetContactableB());
+                auto pos1 = body1->GetPos();
+                auto pos2 = body2->GetPos();
+                auto force = contact->GetForce();
+                auto torque = contact->GetTorque();
+                GetLog() << "body1: " << body1->GetIdentifier() << "\n";
+                GetLog() << "body2: " << body2->GetIdentifier() << "\n";
+                GetLog() << "pos1: " << pos1[0] << ", " << pos1[1] << ", " << pos1[2] << "\n";
+                GetLog() << "pos2: " << pos2[0] << ", " << pos2[1] << ", " << pos2[2] << "\n";
+                GetLog() << "force: " << force[0] << ", " << force[1] << ", " << force[2] << "\n";
+                GetLog() << "torque: " << torque[0] << ", " << torque[1] << ", " << torque[2] << "\n";
+            }
+
+
 
             // if (frame % 10 == 0) {
             //     vis->WriteImageToFile(out_dir + "/img_" + std::to_string(frame) + ".png");
