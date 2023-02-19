@@ -113,3 +113,4 @@ output*.txt
 *.pov
 *.pov
 *.pov
+postproc/__temp__.pov
