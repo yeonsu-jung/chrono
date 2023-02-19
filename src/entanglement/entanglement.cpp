@@ -33,8 +33,53 @@
 #include <entanglement.h>
 #include <vector>
 #include <regex>
-#include <iomanip> 
+#include <iomanip>
+
+#ifdef _WIN32
 #include <direct.h> // windows
+#endif
+#ifdef __APPLE__
+#include <sys/stat.h> // 
+#endif
+
+#include <cstdio>
+#include <cstdio>
+#include <string>
+
+bool copy_file(const std::string& source_path, const std::string& dest_path) {
+    // Open source file
+    FILE* source_file = fopen(source_path.c_str(), "rb");
+    if (source_file == nullptr) {
+        return false;
+    }
+
+    // Open destination file
+    FILE* dest_file = fopen(dest_path.c_str(), "wb");
+    if (dest_file == nullptr) {
+        fclose(source_file);
+        return false;
+    }
+
+    // Copy data from source file to destination file
+    const size_t buffer_size = 1024;
+    char buffer[buffer_size];
+    size_t bytes_read;
+    size_t bytes_written;
+    while ((bytes_read = fread(buffer, 1, buffer_size, source_file)) > 0) {
+        bytes_written = fwrite(buffer, 1, bytes_read, dest_file);
+        if (bytes_written != bytes_read) {
+            fclose(source_file);
+            fclose(dest_file);
+            return false;
+        }
+    }
+
+    // Close files and return success
+    fclose(source_file);
+    fclose(dest_file);
+    return true;
+}
+
 
 std::string createNumberedDirectory(const std::string& dirPath, const std::string& dirName)
 {
@@ -43,6 +88,7 @@ std::string createNumberedDirectory(const std::string& dirPath, const std::strin
     int counter = 0;
 
     // Check if the directory already exists
+#ifdef _WIN32
     while (_mkdir((dirPath + newDirName).c_str()) == -1)
     {
         // If the directory already exists, increment the counter and add it to the directory name
@@ -55,9 +101,26 @@ std::string createNumberedDirectory(const std::string& dirPath, const std::strin
             throw std::runtime_error("Could not create numbered directory");
         }
     }
+#endif
+
+#ifdef __APPLE__
+    int status = mkdir((dirPath + newDirName).c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);    
+    while (status == -1) {        
+        // If the directory already exists, increment the counter and add it to the directory name
+        counter++;
+        newDirName = dirName + " (" + std::to_string(counter) + ")";
+        status = mkdir((dirPath + newDirName).c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);    
+
+        if (counter > 15)
+        {
+            // If the counter is too high, something is wrong
+            throw std::runtime_error("Could not create numbered directory");
+        }
+    } 
+#endif
 
     // Return the path to the new directory
-    return dirPath + newDirName + "\\";
+    return dirPath + newDirName + "/";
 }
 
 
@@ -490,8 +553,12 @@ void parsing_inputs_from_file(int& num_rods,
                               double& time_step,
                               double& excitation_frequency,
                               double& excitation_amplitude) {
+#ifdef _WIN32
     std::ifstream file("C:/Users/yjung/Documents/GitHub/chrono/build/bin/Release/inputs.txt");
-    // std::ifstream file("/Users/yeonsu/Documents/github/chrono/build/bin/inputs.txt");
+#endif
+#ifdef __APPLE__
+    std::ifstream file("/Users/yeonsu/Documents/github/chrono/build/bin/inputs.txt");
+#endif
     // std::ifstream file("./inputs.txt");
     std::string str;
     while (std::getline(file, str)) {
@@ -693,6 +760,10 @@ int main(int argc, char* argv[]) {
       public:
         ContactReporter() {}
 
+        ContactReporter(std::string file_name) {
+            _file_name = file_name;
+        }
+
       private:
         virtual bool OnReportContact(const ChVector<>& pA,
                                      const ChVector<>& pB,
@@ -704,25 +775,43 @@ int main(int argc, char* argv[]) {
                                      ChContactable* modA,
                                      ChContactable* modB) override {
             // Check if contact involves box1
-            GetLog() << "OnReportContact" << '\n';
-            GetLog() << "modA: " << modA->GetPhysicsItem()->GetIdentifier() << '\n';
-            GetLog() << "modB: " << modB->GetPhysicsItem()->GetIdentifier() << '\n';
-            GetLog() << "cforce: " << cforce << '\n';
-            GetLog() << "ctorque: " << ctorque << '\n';
+            // open file    
+            std::ofstream outfile;
+            outfile.open(_file_name, std::ios_base::app);
+
+            // write to file
+            outfile << pA.x() << " " << pA.y() << " " << pA.z() << " " << pB.x() << " " << pB.y() << " " << pB.z() << " "
+                    << plane_coord(0, 0) << " " << plane_coord(0, 1) << " " << plane_coord(0, 2) << " " << plane_coord(1, 0)
+                    << " " << plane_coord(1, 1) << " " << plane_coord(1, 2) << " " << plane_coord(2, 0) << " "
+                    << plane_coord(2, 1) << " " << plane_coord(2, 2) << " " << distance << " " << eff_radius << " "
+                    << cforce.x() << " " << cforce.y() << " " << cforce.z() << " " << ctorque.x() << " " << ctorque.y()
+                    << " " << ctorque.z() << " " << modA->GetPhysicsItem()->GetIdentifier() << " "
+                    << modB->GetPhysicsItem()->GetIdentifier() << '\n';
+            
+            outfile.close();
+
+            // GetLog() << "OnReportContact" << '\n';
+            // GetLog() << "modA: " << modA->GetPhysicsItem()->GetIdentifier() << '\n';
+            // GetLog() << "modB: " << modB->GetPhysicsItem()->GetIdentifier() << '\n';
+            // GetLog() << "cforce: " << cforce << '\n';
+            // GetLog() << "ctorque: " << ctorque << '\n';
 
             // GetLog() << "obj1: " << modA->GetPhysicsItem() << std::endl;
             // GetLog() << "obj2: " << modB->GetPhysicsItem() << std::endl;
 
-            return true;
+            return true;        
         }
+        std::string _file_name;
     };
 
-    // Use the above callback to process each contact as it is created.
-    sys.GetContactContainer()->RegisterAddContactCallback(mycontact_callback);
-    auto creporter = chrono_types::make_shared<ContactReporter>();
-    // auto creporter = chrono_types::make_shared<ChContactContainer::ReportContactCallback>();
-
+    #ifdef _WIN32
     size_t found = file_path.find_last_of("/\\");
+    #endif
+
+    #ifdef __APPLE__    
+    size_t found = file_path.find_last_of("/");
+    #endif
+
     std::string file_name = file_path.substr(found + 1);
     std::string file_name_no_ext = file_name.substr(0, file_name.find_last_of("."));
     
@@ -744,12 +833,18 @@ int main(int argc, char* argv[]) {
         alphaString = alphaString.substr(0, dotPos + 2);
     }
 
+#ifdef _WIN32 
     std::string out_dir = "C:/Users/yjung/Dropbox (Harvard University)/Entangled/Sims/";
+#endif
+#ifdef __APPLE__
+    std::string out_dir = "/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/";
+#endif
+
     std::string dirName = "alpha" + alphaString + "_"+ file_name_no_ext + "_" + "tstep_" + tStepString + "simtime_" + simTimeString;
     std::string newDirPath = createNumberedDirectory(out_dir, dirName);
 
     std::ofstream out_file;
-    out_file.open(newDirPath + "sim_data.txt");
+    out_file.open(newDirPath + "/sim_data.txt");
 
 
     // if (!out_file.is_open()) {
@@ -759,7 +854,7 @@ int main(int argc, char* argv[]) {
      // Export the node to a YAML file
     
     std::ofstream fout;
-    std::string fileName = out_dir + "/metadata.yaml";
+    std::string fileName = newDirPath + "/metadata.yaml";
     fout.open(fileName);
     fout << "alpha " << alpha << '\n';
     fout << "rod_radius " << rod_radius << '\n';
@@ -774,6 +869,18 @@ int main(int argc, char* argv[]) {
     fout << "file_name " << file_name << '\n';
 
     fout.close();
+
+    #ifdef _WIN32        
+        copy_file("C:/Users/yjung/Documents/GitHub/chrono/build/bin/Release/inputs.txt", newDirPath + "/inputs.txt");
+    #endif
+    #ifdef __APPLE__
+        copy_file("/Users/yeonsu/Documents/github/chrono/build/bin/inputs.txt", newDirPath + "/inputs.txt");        
+    #endif
+
+    // Use the above callback to process each contact as it is created.
+    sys.GetContactContainer()->RegisterAddContactCallback(mycontact_callback);
+    auto creporter = chrono_types::make_shared<ContactReporter>(newDirPath + "/contacts.txt");
+
 
     int id;
     ChVector<> pos;
@@ -823,23 +930,7 @@ int main(int argc, char* argv[]) {
             sys.Set_G_acc(ChVector<>(0, -9.8 + excitation_amplitude*cos( CH_C_2PI*excitation_frequency*sys.GetChTime()),0));
             // floorBody->SetPos(ChVector<>(0, -box_height/2 + 10*rod_radius*cos( CH_C_2PI*excitation_frequency*sys.GetChTime()),0) );
             std::cout << "\r" << "time: " << sys.GetChTime() << '\t' << "Number of contacts: " << sys.GetNcontacts();
-            Get every contact info
-            for (int i = 0; i < sys.GetNcontacts(); i++) {
-                auto contact = sys.GetContact(i);
-                auto body1 = std::static_pointer_cast<ChBody>(contact->GetContactableA());
-                auto body2 = std::static_pointer_cast<ChBody>(contact->GetContactableB());
-                auto pos1 = body1->GetPos();
-                auto pos2 = body2->GetPos();
-                auto force = contact->GetForce();
-                auto torque = contact->GetTorque();
-                GetLog() << "body1: " << body1->GetIdentifier() << "\n";
-                GetLog() << "body2: " << body2->GetIdentifier() << "\n";
-                GetLog() << "pos1: " << pos1[0] << ", " << pos1[1] << ", " << pos1[2] << "\n";
-                GetLog() << "pos2: " << pos2[0] << ", " << pos2[1] << ", " << pos2[2] << "\n";
-                GetLog() << "force: " << force[0] << ", " << force[1] << ", " << force[2] << "\n";
-                GetLog() << "torque: " << torque[0] << ", " << torque[1] << ", " << torque[2] << "\n";
-            }
-
+            
 
 
             // if (frame % 10 == 0) {
@@ -863,14 +954,13 @@ int main(int argc, char* argv[]) {
     } else {  // no visualization
         while (sys.GetChTime() < simulation_time) {
             // TO DO: write down callback function to get the position of the cylinder
-            // TO DO: convert the quaternion to vector
             
-            // GetLog() << '\r' << "time: " << sys.GetChTime() << '\n';
-            // GetLog() << "Number of contacts: " << sys.GetNcontacts() << '\n';
+            GetLog() << '\r' << "time: " << sys.GetChTime() << "\t" << "Number of contacts: " << sys.GetNcontacts() << '\n';            
             sys.Set_G_acc(ChVector<>(0, -9.8 + excitation_amplitude*cos( CH_C_2PI*excitation_frequency*sys.GetChTime()),0));
             // floorBody->SetPos(ChVector<>(0, -box_height/2 + 10*rod_radius*cos( CH_C_2PI*excitation_frequency*sys.GetChTime()),0) );
             std::cout << "\r" << "time: " << sys.GetChTime() << '\t' << "Number of contacts: " << sys.GetNcontacts();
-            
+            sys.GetContactContainer()->ReportAllContacts(creporter);
+
             out_file << "ITEM: TIMESTEP\n" << sys.GetChTime() << "\n";
             out_file << "ITEM: NUMBER OF ATOMS\n" << sys.Get_bodylist().size() << "\n";  // is this necessary?
             // out_file << "ITEM: BOX BOUNDS pp pp pp\n";
@@ -894,10 +984,16 @@ int main(int argc, char* argv[]) {
                          << contact_torque[1] << " " << contact_torque[2] << "\n";
             }
 
-            // out_file << pos[0] << ", " << pos[1] << ", " << pos[2] << ", " << rot.e0() << ", " << rot.e1() << ", "
-            //         << rot.e2() << ", " << rot.e3() << "\n";
+            std::ofstream contact_file;
+            contact_file.open(newDirPath + "/contacts.txt", std::ios::app);
 
-            // sys.GetContactContainer()->ReportAllContacts(creporter);
+            contact_file << "ITEM: TIMESTEP\n" << sys.GetChTime() << "\n";
+            contact_file << "ITEM: NUMBER OF CONTACTS\n" << sys.GetNcontacts() << "\n";  // is this necessary?                        
+            contact_file << "pA.x pA.y pA.z pB.x pB.y pB.z pc00 pc01 pc02 pc10 pc11 pc12 pc20 pc21 pc22 distance eff_radius cfx cfy cfz ctau_x ctau_y ctau_z\n"                        
+            contact_file.close();
+            // out_file << "ITEM: BOX BOUNDS pp pp pp\n";
+            // out_file << "0 10\n0 10\n0 10\n";            
+            sys.GetContactContainer()->ReportAllContacts(creporter);
 
             // GetLog() << "id: " << id << "\n";
             // GetLog() << "pos: " << pos[0] << ", " << pos[1] << ", " << pos[2] << "\n";
@@ -910,5 +1006,6 @@ int main(int argc, char* argv[]) {
         }
     }
     out_file.close();
+
     return 0;
 }
