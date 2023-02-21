@@ -989,7 +989,7 @@ int main(int argc, char* argv[]) {
 
             contact_file << "ITEM: TIMESTEP\n" << sys.GetChTime() << "\n";
             contact_file << "ITEM: NUMBER OF CONTACTS\n" << sys.GetNcontacts() << "\n";  // is this necessary?                        
-            contact_file << "pA.x pA.y pA.z pB.x pB.y pB.z pc00 pc01 pc02 pc10 pc11 pc12 pc20 pc21 pc22 distance eff_radius cfx cfy cfz ctau_x ctau_y ctau_z\n"                        
+            contact_file << "pA.x pA.y pA.z pB.x pB.y pB.z pc00 pc01 pc02 pc10 pc11 pc12 pc20 pc21 pc22 distance eff_radius cfx cfy cfz ctau_x ctau_y ctau_z\n";
             contact_file.close();
             // out_file << "ITEM: BOX BOUNDS pp pp pp\n";
             // out_file << "0 10\n0 10\n0 10\n";            
