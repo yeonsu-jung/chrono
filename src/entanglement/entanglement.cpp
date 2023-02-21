@@ -46,6 +46,7 @@
 #include <cstdio>
 #include <cstdio>
 #include <string>
+#include <chrono>
 
 bool copy_file(const std::string& source_path, const std::string& dest_path) {
     // Open source file
@@ -423,6 +424,7 @@ int main(int argc, char* argv[]) {
 
     // Create a ChronoENGINE physical system
     ChSystemNSC sys;
+    sys.SetNumThreads(8);
 
     // TO DO: consider using a class to pass geometric, mechanical parameters - must I?
 
@@ -584,6 +586,24 @@ int main(int argc, char* argv[]) {
     // Simulation loop
     int frame = 0;
     const int FLUSH_INTERVAL = 1000;
+    bool test = true;
+
+    if (test) {
+        while (sys.GetChTime() < simulation_time) {
+            GetLog() << '\r' << "This is a test. " << "time: " << sys.GetChTime() << "\t"
+                     << "Number of contacts: " << sys.GetNcontacts();
+
+            // initial waiting
+            if (sys.GetChTime() < 3) {
+                sys.Set_G_acc(ChVector<>(0, -9.8, 0));
+                sys.DoStepDynamics(0.01);
+            } else {
+                sys.Set_G_acc(
+                    ChVector<>(0, -9.8 + excitation_amplitude * cos(CH_C_2PI * excitation_frequency * sys.GetChTime()), 0));
+                sys.DoStepDynamics(time_step);
+            }
+        }
+    }
 
     if (visualize) {
         while (vis->Run()) {
