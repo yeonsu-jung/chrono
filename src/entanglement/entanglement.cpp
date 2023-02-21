@@ -699,7 +699,7 @@ int main(int argc, char* argv[]) {
         vis->Initialize();
         // vis->AddLogo();
         vis->AddSkyBox();
-        vis->AddCamera(camera_position);        
+        vis->AddCamera(camera_position);
         vis->AddTypicalLights();
     }
 
@@ -776,6 +776,10 @@ int main(int argc, char* argv[]) {
                                      ChContactable* modB) override {
             // Check if contact involves box1
             // open file    
+            
+            ChVector<> cforce_lab = plane_coord * cforce;
+            GetLog() << "Contact force: " << cforce_lab << "\n";
+
             std::ofstream outfile;
             outfile.open(_file_name, std::ios_base::app);
 
@@ -786,9 +790,8 @@ int main(int argc, char* argv[]) {
                     << plane_coord(2, 1) << " " << plane_coord(2, 2) << " " << distance << " " << eff_radius << " "
                     << cforce.x() << " " << cforce.y() << " " << cforce.z() << " " << ctorque.x() << " " << ctorque.y()
                     << " " << ctorque.z() << " " << modA->GetPhysicsItem()->GetIdentifier() << " "
-                    << modB->GetPhysicsItem()->GetIdentifier() << '\n';
-            
-            outfile.close();
+                    << modB->GetPhysicsItem()->GetIdentifier() << '\n';            
+            outfile. close();
 
             // GetLog() << "OnReportContact" << '\n';
             // GetLog() << "modA: " << modA->GetPhysicsItem()->GetIdentifier() << '\n';
@@ -801,7 +804,7 @@ int main(int argc, char* argv[]) {
 
             return true;        
         }
-        std::string _file_name;
+        std::string _file_name;        
     };
 
     #ifdef _WIN32
