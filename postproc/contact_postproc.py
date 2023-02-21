@@ -87,23 +87,54 @@ for chunk in contact_chunks:
     df = pd.DataFrame(np.array(data_fields,dtype=float),columns=column_names)
 
     dfs_contact.append(df)
+
 # %%
+new_dfs_contact = []
+for df in dfs_contact:
+    r1 = df['rod1'].values
+    r2 = df['rod2'].values
+
+    R = df.loc[:,['pc00','pc01','pc02','pc10','pc11','pc12','pc20','pc21','pc22']].values.reshape(-1,3,3)
+    v = df.loc[:,['cfx','cfy','cfz']].values
+
+    new_v = np.matmul(R,v[:,:,np.newaxis])[:,:,0]
+    new_df = pd.DataFrame(np.hstack([df.loc[:,['rod1','rod2']],new_v]),columns=['rod1','rod2','cfx','cfy','cfz'])
+    new_dfs_contact += [new_df]
+    
+# %%
+ind = 2
+def sum_over_duplicates(df):
+    df = df.groupby(['rod1','rod2']).sum().reset_index()
+    return df
+summed = sum_over_duplicates(new_dfs_contact[ind])
+
+which_rod = 100027
+summed[summed['rod1'] == which_rod].loc[:,['cfx','cfy','cfz']].sum().to_numpy()*-1 + summed[summed['rod2'] == which_rod].loc[:,['cfx','cfy','cfz']].sum().to_numpy()
+# %%
+df_rod = dfs_rod[ind]
+df_rod[df_rod['id']==which_rod].loc[:,'fx':'fz']
+
+# %%
+
+
+
+
+
+
+
+
+
+
 # %%
 ind = 2
 df_contact = dfs_contact[ind]
-which_rod = 100258
 df_i = df_contact[df_contact['rod1']==which_rod]
 df_i
 # %%
 df_j = df_contact[df_contact['rod2']==which_rod]
 # df_j.loc[:,'cfx':'cfz'] = df_j.loc[:,'cfx':'cfz'].values * -1
 df_j.loc[:,'cfx':'cfz'] = df_j.loc[:,'cfx':'cfz'].values * -1
-
-# %%
 df_c = pd.concat([df_i,df_j])
-# %%
-df_c
-
 
 # %%
 force_in_gc = []
@@ -113,16 +144,10 @@ for i,r in df_c.iterrows():
     force_in_gc.append(np.matmul(rot_mat,fvec))
 
 force_in_gc = np.array(force_in_gc)
-force_in_gc
-
-# %%
 np.sum(-force_in_gc,axis=0)
 # %%
-which_rod = 100024
 
-ind = 2
-df_rod = dfs_rod[ind]
-df_rod[df_rod['id']==which_rod].loc[:,'fx':'fz']
+
 
 # %%
 # sum over duplicates
