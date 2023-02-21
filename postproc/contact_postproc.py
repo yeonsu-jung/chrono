@@ -7,24 +7,28 @@ from matplotlib import pyplot as plt
 from scipy.spatial.transform import Rotation
 from vapory import *
 from functions import *
-# %matplotlib qt
+%matplotlib qt
 # %%
 foldername = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha125.0_RandomRods_Alpha125_N392_Date2023-02-14_23-25-09_tstep_1.00simtime_1.00'
+foldername = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha38.0_RandomRods_Alpha38_N119_Date2023-02-14_23-03-10_tstep_1.00simtime_1.00 (1)'
+foldername = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha76.0_RandomRods_Alpha76_N238_Date2023-02-14_23-24-30_tstep_0.50simtime_0.50 (1)'
 fname = foldername + '/sim_data.txt'
 # fname = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha200.0_RandomRods_Alpha200_N628_Date2023-02-14_23-23-50_tstep_1.00simtime_1.00/sim_data.txt'
 num_atoms,num_time_steps,variables = check_dump_file(fname)
 print(num_atoms,num_time_steps)
 
 # %%
-last_chunk = 1400
-chunks_to_skip = 100
+last_chunk = 800
+chunks_to_skip = 5
 # %%
 # fname = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha200.0_RandomRods_Alpha200_N628_Date2023-02-14_23-23-50_tstep_1.00simtime_1.00/sim_data.txt'
 import regex as re
 # extract alpha and N from filename and store it to variables
-_,alpha,N = re.match(r'.*alpha(\d+.\d+)_RandomRods_Alpha(\d+.\d+)_N(\d+)_Date.*',fname).groups()
+# _,alpha,N = re.match(r'.*alpha(\d+.\d+)_RandomRods_Alpha(\d+.\d+)_N(\d+)_Date.*',fname).groups()
+_,alpha,N = re.match(r'.*alpha(\d+.\d+)_RandomRods_Alpha(\d+)_N(\d+)_Date.*',fname).groups()
 rod_radius = 1
 rod_length = float(alpha)*2
+# %%
 
 # %%
 # if system is windows
@@ -69,6 +73,8 @@ column_names = contact_chunks[0][4].split()
 column_names.append('rod1')
 column_names.append('rod2')
 # %%
+rod_columns = motion_chunks[0][4][2:]
+# %%
 # every df_rod
 dfs_rod = []
 for chunk in motion_chunks:
@@ -100,30 +106,118 @@ for df in dfs_contact:
     new_v = np.matmul(R,v[:,:,np.newaxis])[:,:,0]
     new_df = pd.DataFrame(np.hstack([df.loc[:,['rod1','rod2']],new_v]),columns=['rod1','rod2','cfx','cfy','cfz'])
     new_dfs_contact += [new_df]
+
+# %%
+ind = 35
+df0 = dfs_contact[ind]
+A = df0.groupby(['rod1','rod2']).agg({'cfx':'sum','cfy':'sum','cfz':'sum'})
+df1 = dfs_contact[ind+1]
+B = df1.groupby(['rod1','rod2']).agg({'cfx':'sum','cfy':'sum','cfz':'sum'})
+C = (B-A)**2
+C
+# %%
+
+
+# %% movie
+dir_name = f'./{alpha}_{N}_{last_chunk}_{chunks_to_skip}'
+if os.path.exists(dir_name):
+    i = 1
+    while os.path.exists(dir_name + f' ({i})'):
+        i += 1
+    dir_name = dir_name + f'_{i}'
+os.mkdir(dir_name)
+# %%
+df0 = pd.DataFrame(np.array(motion_chunks[1][5:],dtype=float),columns=motion_chunks[0][4][2:])
+# 50th row in df0
+floor_height = df0.y.min()
+lid_height = df0.y.max()
+box_height = lid_height - floor_height
+
+# %%
+# indexing third to fifth column
+centroids = df0.iloc[:-6,2:5].to_numpy()
+quaternions = df0.iloc[:-6,8:12].to_numpy()
+# %%
+camera_height = floor_height*1.5
+camera = Camera( 'location', [0,camera_height,-box_height], 'look_at', [0,np.mean(centroids[1],axis=0),0] )
+light = LightSource( [2,4,-box_height], 'color', [1,1,1] )
+bgd = Background( 'color', [1,1,1] )
+cylinders = []
+for cen,q in zip(centroids,quaternions):
+    ori = quaternion_vector_rotation(q, (0.0, 1.0, 0.0))
+    base = [cen[0]-ori[0]*rod_length/2, cen[1]-ori[1]*rod_length/2, cen[2]-ori[2]*rod_length/2]
+    cap = [cen[0]+ori[0]*rod_length/2, cen[1]+ori[1]*rod_length/2, cen[2]+ori[2]*rod_length/2]    
+    cylinders.append(Cylinder( base, cap, rod_radius, Texture( Pigment( 'color', [1,0,1] ))))
+
+scene = Scene( camera, objects= [light, *cylinders, bgd])
+scene.render('ipython', width=800, height=600, antialiasing=0.0001)
+
     
 # %%
-ind = 2
-def sum_over_duplicates(df):
-    df = df.groupby(['rod1','rod2']).sum().reset_index()
-    return df
-summed = sum_over_duplicates(new_dfs_contact[ind])
+for i,chunk in enumerate(motion_chunks):
+    df = [my_float_list(line) for line in chunk[5:]]
+    df = np.array(df)
 
-which_rod = 100027
-summed[summed['rod1'] == which_rod].loc[:,['cfx','cfy','cfz']].sum().to_numpy()*-1 + summed[summed['rod2'] == which_rod].loc[:,['cfx','cfy','cfz']].sum().to_numpy()
+    cylinders = []
+    for each_rod_data in df[:-6]:
+        cen = each_rod_data[2:5]        
+        quaternion = each_rod_data[8:12]
+        ori = quaternion_vector_rotation(quaternion, (0.0, 1.0, 0.0))
+        base = [cen[0]-ori[0]*rod_length/2, cen[1]-ori[1]*rod_length/2, cen[2]-ori[2]*rod_length/2]
+        cap = [cen[0]+ori[0]*rod_length/2, cen[1]+ori[1]*rod_length/2, cen[2]+ori[2]*rod_length/2]
+        
+        cylinders.append(Cylinder( base, cap, rod_radius, Texture( Pigment( 'color', [1,0,1] ))))
+
+    scene = Scene( camera, objects= [light, *cylinders, bgd])
+    scene.render(f'{dir_name}/img_{i:04d}.png', width=800, height=600, antialiasing=0.0001)
+
+
 # %%
-df_rod = dfs_rod[ind]
-df_rod[df_rod['id']==which_rod].loc[:,'fx':'fz']
+dfr0 = dfs_rod[ind]
+dfr1 = dfs_rod[ind+1]
+# %%
+dfr0.loc[:,'vx':'vz']
+# %%
+dfr1.loc[:,'vx':'vz']
+# %%
+dfr0.loc[:,['id','fx','fy','fz']]
+# %%
+dfr1.loc[:,['id','fx','fy','fz']]
+# %%
+# plot rods
+fig = plt.figure(figsize=(10,10))
+ax = fig.add_subplot(111, projection='3d')
+# ax.set_xlim(-1,1)
+# ax.set_ylim(-1,1)
+# ax.set_zlim(-1,1)
+ax.set_xlabel('x')
+ax.set_ylabel('y')
+ax.set_zlabel('z')
+ax.set_title('Rods')
+
+from scipy.spatial.transform import Rotation
+
+for i,r in dfr0.iterrows():
+    centroids = [r.x,r.y,r.z]
+    q = [r.u1,r.u2,r.u3,r.u4]
+
+    ori = quaternion_vector_rotation(q, (0.0, 1.0, 0.0))    
+    ori = np.array(ori)
+    # ax.text(x,y,z,r.id)
+    # Define rod endpoints
+    p1 = centroids - rod_length * ori/2
+    p2 = centroids + rod_length * ori/2
+
+    # Define rod points
+    # t = np.linspace(0, 1, num=2)
+    # rod_points = np.outer(t, r * np.array([-1, 1])) + np.outer(np.ones_like(t), p1)
+    rod_points = np.array([p1,p2])
+
+    rod_points = np.dot(rod_points - p1, R.T) + p1
+    ax.plot(rod_points[:, 0], rod_points[:, 1], rod_points[:, 2])
 
 # %%
-
-
-
-
-
-
-
-
-
+A[A['rod1'==100173]]
 
 # %%
 ind = 2
