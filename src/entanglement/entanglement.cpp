@@ -119,6 +119,29 @@ std::string createNumberedDirectory(const std::string& dirPath, const std::strin
     return dirPath + newDirName + "/";
 }
 
+voids write_rod_data(ChSystemNSC& sys, std::ofstream& out_file) {
+    
+    out_file << "ITEM: TIMESTEP\n" << sys.GetChTime() << "\n";
+    out_file << "ITEM: NUMBER OF ATOMS\n" << sys.Get_bodylist().size() << "\n";  // is this necessary?            
+    out_file << "ITEM: ATOMS id type x y z vx vy vz u1 u2 u3 u4 w1 w2 w3 fx fy fz tx ty tz\n";            
+    for (int i = 0; i < sys.Get_bodylist().size(); i++) {
+        out_file << sys.Get_bodylist()[i]->GetIdentifier() << " 1 "
+                    << sys.Get_bodylist()[i]->GetPos().x() << " " << sys.Get_bodylist()[i]->GetPos().y() << " "
+                    << sys.Get_bodylist()[i]->GetPos().z() << " " << sys.Get_bodylist()[i]->GetPos_dt().x() << " "
+                    << sys.Get_bodylist()[i]->GetPos_dt().y() << " " << sys.Get_bodylist()[i]->GetPos_dt().z() << " "
+                    << sys.Get_bodylist()[i]->GetRot().e0() << " " << sys.Get_bodylist()[i]->GetRot().e1() << " "
+                    << sys.Get_bodylist()[i]->GetRot().e2() << " " << sys.Get_bodylist()[i]->GetRot().e3() << " "
+                    << sys.Get_bodylist()[i]->GetWvel_loc().x() << " " << sys.Get_bodylist()[i]->GetWvel_loc().y()
+                    << " " << sys.Get_bodylist()[i]->GetWvel_loc().z() << " "
+                    << sys.Get_bodylist()[i]->GetContactForce().x() << " "
+                    << sys.Get_bodylist()[i]->GetContactForce().y() << " "
+                    << sys.Get_bodylist()[i]->GetContactForce().z() << " "
+                    << sys.Get_bodylist()[i]->GetContactTorque().x() << " "
+                    << sys.Get_bodylist()[i]->GetContactTorque().y() << " "
+                    << sys.Get_bodylist()[i]->GetContactTorque().z() << "\n";
+
+}
+
 // consider event reciever for real time parameter adjustment
 std::shared_ptr<ChBody> test_with_single_cylinder(ChSystemNSC& sys,
                                                   double rod_radius,
@@ -640,41 +663,9 @@ int main(int argc, char* argv[]) {
             sys.Set_G_acc(
                 ChVector<>(0,
                             -9.8 + excitation_amplitude * cos(CH_C_2PI * excitation_frequency * sys.GetChTime()),
-                            0));
-            
-                
-            out_file << "ITEM: TIMESTEP\n" << sys.GetChTime() << "\n";
-            out_file << "ITEM: NUMBER OF ATOMS\n" << sys.Get_bodylist().size() << "\n";  // is this necessary?            
-            out_file << "ITEM: ATOMS id type x y z vx vy vz u1 u2 u3 u4 w1 w2 w3 fx fy fz tx ty tz\n";            
-            for (int i = 0; i < sys.Get_bodylist().size(); i++) {
-                out_file << sys.Get_bodylist()[i]->GetIdentifier() << " 1 "
-                         << sys.Get_bodylist()[i]->GetPos().x() << " " << sys.Get_bodylist()[i]->GetPos().y() << " "
-                         << sys.Get_bodylist()[i]->GetPos().z() << " " << sys.Get_bodylist()[i]->GetPos_dt().x() << " "
-                         << sys.Get_bodylist()[i]->GetPos_dt().y() << " " << sys.Get_bodylist()[i]->GetPos_dt().z() << " "
-                         << sys.Get_bodylist()[i]->GetRot().e0() << " " << sys.Get_bodylist()[i]->GetRot().e1() << " "
-                         << sys.Get_bodylist()[i]->GetRot().e2() << " " << sys.Get_bodylist()[i]->GetRot().e3() << " "
-                         << sys.Get_bodylist()[i]->GetWvel_loc().x() << " " << sys.Get_bodylist()[i]->GetWvel_loc().y()
-                         << " " << sys.Get_bodylist()[i]->GetWvel_loc().z() << " "
-                         << sys.Get_bodylist()[i]->GetContactForce().x() << " "
-                         << sys.Get_bodylist()[i]->GetContactForce().y() << " "
-                         << sys.Get_bodylist()[i]->GetContactForce().z() << " "
-                         << sys.Get_bodylist()[i]->GetContactTorque().x() << " "
-                         << sys.Get_bodylist()[i]->GetContactTorque().y() << " "
-                         << sys.Get_bodylist()[i]->GetContactTorque().z() << "\n";
-                // id = sys.Get_bodylist()[i]->GetIdentifier();
-                // pos = sys.Get_bodylist()[i]->GetPos();
-                // vpos = sys.Get_bodylist()[i]->GetPos_dt();
-                // rot = sys.Get_bodylist()[i]->GetRot();
-                // vrot = sys.Get_bodylist()[i]->GetWvel_loc();
-                // contact_force = sys.Get_bodylist()[i]->GetContactForce();
-                // contact_torque = sys.Get_bodylist()[i]->GetContactTorque();
-                // out_file << id << " 1 "<< pos[0] << " " << pos[1] << " " << pos[2] << " " << vpos[0] << " " << vpos[1]
-                //          << " " << vpos[2] << " " << rot.e0() << " " << rot.e1() << " " << rot.e2() << " " << rot.e3()
-                //          << " " << vrot[0] << " " << vrot[1] << " " << vrot[2] << " " << contact_force[0] << " "
-                //          << contact_force[1] << " " << contact_force[2] << " " << contact_torque[0] << " "
-                //          << contact_torque[1] << " " << contact_torque[2] << "\n";
+                            0));                            
             }
-
+            write_rod_data(sys, out_file);
             contact_outfile << "ITEM: TIMESTEP\n" << sys.GetChTime() << "\n";
             contact_outfile << "ITEM: NUMBER OF CONTACTS\n" << sys.GetNcontacts() << "\n";  // is this necessary?
             contact_outfile << "pA.x pA.y pA.z pB.x pB.y pB.z pc00 pc01 pc02 pc10 pc11 pc12 pc20 pc21 pc22 distance "
