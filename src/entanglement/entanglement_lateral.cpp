@@ -161,7 +161,7 @@ void load_rods_from_file(ChSystemNSC& sys,
     // mat->SetFriction(friction_coefficient);
     mat->SetSfriction(friction_coefficient);
     mat->SetKfriction(friction_coefficient*0.5);
-    // mat->SetCohesion(cohesion);
+    mat->SetCohesion(cohesion);
     std::cout << "Loading rods from file: " << file_path << std::endl;
 
     std::ifstream myFile;
@@ -193,7 +193,7 @@ void load_rods_from_file(ChSystemNSC& sys,
         N_skip++;
     }
     myFile.close();
-    box_height = rod_length * 8;
+    box_height = container_radius*2.5;
 
     int N = 0;
     myFile.open(file_path);
@@ -271,7 +271,7 @@ std::shared_ptr<chrono::ChBody> create_walls(ChSystemNSC& sys,
     ground_mat->SetFriction(friction_coefficient);
     ground_mat->SetSfriction(friction_coefficient);
     ground_mat->SetKfriction(friction_coefficient*0.5);
-    // ground_mat->SetCohesion(cohesion);
+    ground_mat->SetCohesion(cohesion);
 
     auto ground_mat_vis = chrono_types::make_shared<ChVisualMaterial>(*ChVisualMaterial::Default());
     // ground_mat_vis->SetKdTexture(GetChronoDataFile("textures/concrete.jpg"));
@@ -462,7 +462,8 @@ int main(int argc, char* argv[]) {
 
     auto vis = chrono_types::make_shared<ChVisualSystemIrrlicht>();
     if (visualize) {
-        ChVector<> camera_position(0, 0, 1.2 * box_height);
+        ChVector<> camera_position(0, -box_height/2, 2 * rod_length);       
+        ChVector<> look_at(0, -box_height/2, -2 * rod_length);
 
         vis->AttachSystem(&sys);
         vis->SetWindowSize(800, 600);
@@ -471,6 +472,7 @@ int main(int argc, char* argv[]) {
         // vis->AddLogo();
         vis->AddSkyBox();
         vis->AddCamera(camera_position);
+        vis->SetCameraTarget(look_at);
         vis->AddTypicalLights();
     }
 
@@ -481,8 +483,11 @@ int main(int argc, char* argv[]) {
 
     // Modify some setting of the physical system for the simulation, if you want
 
-    sys.SetSolverType(ChSolver::Type::MINRES);    
-    sys.SetSolverMaxIterations(5);
+    // sys.SetSolverType(ChSolver::Type::MINRES);    
+    // sys.SetSolverMaxIterations(5);
+
+    sys.SetSolverType(ChSolver::Type::BARZILAIBORWEIN);
+    sys.SetSolverMaxIterations(40);
 
     class ContactReporter : public ChContactContainer::ReportContactCallback {
       public:
