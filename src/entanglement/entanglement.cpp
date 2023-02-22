@@ -26,6 +26,7 @@
 #include "chrono/physics/ChLinkMotorRotationSpeed.h"
 #include "chrono/physics/ChSystemNSC.h"
 #include "chrono_irrlicht/ChVisualSystemIrrlicht.h"
+// #include "chrono_multicore/physics/ChSystemMulticore.h"
 
 #include <fstream>
 #include <iostream>
@@ -425,8 +426,9 @@ int main(int argc, char* argv[]) {
 
     // Create a ChronoENGINE physical system
     ChSystemNSC sys;
+    // ChSystemMulticoreNSC sys;
 
-    sys.SetNumThreads(8,4,4);
+    // sys.SetNumThreads(20,20,0);
     // GetLog() << ChOMP::GetNumProcs() << " threads used.\n";
 
 
@@ -589,34 +591,35 @@ int main(int argc, char* argv[]) {
 
     // Simulation loop
     int frame = 0;
-    const int FLUSH_INTERVAL = 1000;
-    bool test = true;
+    const int FLUSH_INTERVAL = 5000;
     auto start_time = std::chrono::high_resolution_clock::now();
 
-    if (test) {
-        for (int i = 0; i < 100000; i++) {
-            GetLog() << '\r' << "This is a test. " << "time: " << sys.GetChTime() << "\t"
-                     << "Number of contacts: " << sys.GetNcontacts();
+    // bool test = true;
+    // auto start_time = std::chrono::high_resolution_clock::now();
+    // if (test) {
+    //     for (int i = 0; i < 1000000; i++) {
+    //         GetLog() << '\r' << "This is a test. " << "time: " << sys.GetChTime() << "\t"
+    //                  << "Number of contacts: " << sys.GetNcontacts();
 
-            // initial waiting
-            if (sys.GetChTime() < 3) {
-                sys.Set_G_acc(ChVector<>(0, -9.8, 0));
-                sys.DoStepDynamics(0.01);
-            } else {
-                sys.Set_G_acc(
-                    ChVector<>(0, -9.8 + excitation_amplitude * cos(CH_C_2PI * excitation_frequency * sys.GetChTime()), 0));
-                sys.DoStepDynamics(time_step);
-            }
+    //         // initial waiting
+    //         if (sys.GetChTime() < 3) {
+    //             sys.Set_G_acc(ChVector<>(0, -9.8, 0));
+    //             sys.DoStepDynamics(0.01);
+    //         } else {
+    //             sys.Set_G_acc(
+    //                 ChVector<>(0, -9.8 + excitation_amplitude * cos(CH_C_2PI * excitation_frequency * sys.GetChTime()), 0));
+    //             sys.DoStepDynamics(time_step);
+    //         }
 
-            auto end_time = std::chrono::high_resolution_clock::now();
-            if (sys.GetChTime() > 5) {
-                std::chrono::duration<double> elapsed_time = end_time - start_time;
-                GetLog() << "Elapsed time: " << elapsed_time.count() << '\n';
-                break;
-            }
+    //         auto end_time = std::chrono::high_resolution_clock::now();
+    //         if (sys.GetChTime() > 5) {
+    //             std::chrono::duration<double> elapsed_time = end_time - start_time;
+    //             GetLog() << "\nElapsed time: " << elapsed_time.count() << '\n';                
+    //             break;
+    //         }
 
-        }
-    }
+    //     }
+    // }
 
     if (visualize) {
         while (vis->Run()) {
@@ -649,6 +652,9 @@ int main(int argc, char* argv[]) {
             if (frame % FLUSH_INTERVAL == 0) {
                 out_file.flush();
                 contact_outfile.flush();
+                auto end_time = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> elapsed_time = end_time - start_time;
+                GetLog() << "Elapsed time: " << elapsed_time.count() << '\n';
             }
         }
     } else {  // no visualization
