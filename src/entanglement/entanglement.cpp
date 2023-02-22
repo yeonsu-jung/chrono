@@ -161,7 +161,7 @@ void load_rods_from_file(ChSystemNSC& sys,
     // mat->SetFriction(friction_coefficient);
     mat->SetSfriction(friction_coefficient);
     mat->SetKfriction(friction_coefficient*0.5);
-    mat->SetCohesion(cohesion);
+    // mat->SetCohesion(cohesion);
     std::cout << "Loading rods from file: " << file_path << std::endl;
 
     std::ifstream myFile;
@@ -271,7 +271,7 @@ std::shared_ptr<chrono::ChBody> create_walls(ChSystemNSC& sys,
     ground_mat->SetFriction(friction_coefficient);
     ground_mat->SetSfriction(friction_coefficient);
     ground_mat->SetKfriction(friction_coefficient*0.5);
-    ground_mat->SetCohesion(cohesion);
+    // ground_mat->SetCohesion(cohesion);
 
     auto ground_mat_vis = chrono_types::make_shared<ChVisualMaterial>(*ChVisualMaterial::Default());
     // ground_mat_vis->SetKdTexture(GetChronoDataFile("textures/concrete.jpg"));
