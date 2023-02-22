@@ -96,6 +96,7 @@ std::string createNumberedDirectory(const std::string& dirPath, const std::strin
 
         if (counter > 15) {
             // If the counter is too high, something is wrong
+            GetLog() << "Could not create numbered directory\n";
             throw std::runtime_error("Could not create numbered directory");
         }
     }
@@ -424,7 +425,10 @@ int main(int argc, char* argv[]) {
 
     // Create a ChronoENGINE physical system
     ChSystemNSC sys;
-    sys.SetNumThreads(8);
+
+    sys.SetNumThreads(8,4,4);
+    // GetLog() << ChOMP::GetNumProcs() << " threads used.\n";
+
 
     // TO DO: consider using a class to pass geometric, mechanical parameters - must I?
 
@@ -587,9 +591,10 @@ int main(int argc, char* argv[]) {
     int frame = 0;
     const int FLUSH_INTERVAL = 1000;
     bool test = true;
+    auto start_time = std::chrono::high_resolution_clock::now();
 
     if (test) {
-        while (sys.GetChTime() < simulation_time) {
+        for (int i = 0; i < 100000; i++) {
             GetLog() << '\r' << "This is a test. " << "time: " << sys.GetChTime() << "\t"
                      << "Number of contacts: " << sys.GetNcontacts();
 
@@ -602,6 +607,14 @@ int main(int argc, char* argv[]) {
                     ChVector<>(0, -9.8 + excitation_amplitude * cos(CH_C_2PI * excitation_frequency * sys.GetChTime()), 0));
                 sys.DoStepDynamics(time_step);
             }
+
+            auto end_time = std::chrono::high_resolution_clock::now();
+            if (sys.GetChTime() > 5) {
+                std::chrono::duration<double> elapsed_time = end_time - start_time;
+                GetLog() << "Elapsed time: " << elapsed_time.count() << '\n';
+                break;
+            }
+
         }
     }
 
