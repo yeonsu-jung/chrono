@@ -10,7 +10,8 @@
 if(ENABLE_MODULE_IRRLICHT)
     message(STATUS "Irrlicht module enabled. Adding entanglement...")
     set(DEMOS ${DEMOS}
-        entanglement        
+        entanglement
+        entanglement_lateral
     )
 endif()
 
