@@ -10,6 +10,8 @@ from functions import *
 foldername = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha125.0_RandomRods_Alpha125_N392_Date2023-02-14_23-25-09_tstep_1.00simtime_1.00'
 foldername = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha38.0_RandomRods_Alpha38_N119_Date2023-02-14_23-03-10_tstep_1.00simtime_1.00 (1)'
 foldername = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha76.0_RandomRods_Alpha76_N238_Date2023-02-14_23-24-30_tstep_0.50simtime_0.50 (1)'
+foldername = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha200.0_RandomRods_Alpha200_N628_Date2023-02-14_23-23-50_tstep_1.00simtime_1.00 (3)'
+foldername = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha66.0_RandomRods_Alpha66_N207_Date2023-02-14_23-33-50_tstep_0.50simtime_0.50 (1)'
 fname = foldername + '/sim_data.txt'
 # fname = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha200.0_RandomRods_Alpha200_N628_Date2023-02-14_23-23-50_tstep_1.00simtime_1.00/sim_data.txt'
 num_atoms,num_time_steps,variables = check_dump_file(fname)
@@ -114,3 +116,10 @@ for i,chunk in enumerate(motion_chunks):
 
     scene = Scene( camera, objects= [light, *cylinders, bgd])
     scene.render(f'{dir_name}/img_{i:04d}.png', width=800, height=600, antialiasing=0.0001)
+
+# %%
+# run matlab script to make movie
+# os.system(f'matlab -nodisplay -nosplash -nodesktop -r "make_video"')
+os.system(f'"/Applications/MATLAB_R2021a.app/bin/matlab" -nodisplay -nosplash -nodesktop -r "make_video("{dir_name}")"')
+
+# %%
