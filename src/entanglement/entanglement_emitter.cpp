@@ -194,7 +194,7 @@ void load_rods_from_file(ChSystemNSC& sys,
         N_skip++;
     }
     myFile.close();
-    box_height = container_radius*4.01;
+    box_height = container_radius*2.01;
 
     int N = 0;
     myFile.open(file_path);
@@ -309,51 +309,51 @@ std::shared_ptr<chrono::ChBody> create_walls(ChSystemNSC& sys,
     
     // create walls placed cylindrically
     // Parameters for the cylindrical wall boundary    
-    // int num_walls = 20;
-    // // Loop to create the walls
-    // for (int i = 0; i < num_walls; i++) {
-    //     double angle = i * 2.0 * CH_C_PI / num_walls;
-    //     auto wall = chrono_types::make_shared<ChBodyEasyBox>(box_thickness,
-    //                                                         box_height,
-    //                                                         box_width* tan(CH_C_PI / num_walls),
-    //                                                         1000,
-    //                                                         true,
-    //                                                         true,
-    //                                                         ground_mat);
-    //     wall->SetPos(ChVector<>(-box_width/2 * cos(angle), 0, box_width/2 * sin(angle)));
-    //     wall->SetRot(Q_from_AngAxis(angle, VECT_Y));
-    //     wall->SetBodyFixed(true);        
-    //     wall->GetVisualShape(0)->SetMaterial(0, ground_mat_vis);
-    //     sys.Add(wall);
-    // }
+    int num_walls = 20;
+    // Loop to create the walls
+    for (int i = 0; i < num_walls; i++) {
+        double angle = i * 2.0 * CH_C_PI / num_walls;
+        auto wall = chrono_types::make_shared<ChBodyEasyBox>(box_thickness,
+                                                            box_height,
+                                                            box_width* tan(CH_C_PI / num_walls),
+                                                            1000,
+                                                            true,
+                                                            true,
+                                                            ground_mat);
+        wall->SetPos(ChVector<>(-box_width/2 * cos(angle), 0, box_width/2 * sin(angle)));
+        wall->SetRot(Q_from_AngAxis(angle, VECT_Y));
+        wall->SetBodyFixed(true);        
+        wall->GetVisualShape(0)->SetMaterial(0, ground_mat_vis);
+        sys.Add(wall);
+    }
 
-    auto wallBody1 = chrono_types::make_shared<ChBodyEasyBox>(
-        box_thickness, box_height, box_width + box_thickness - 0.01, 1000, true, true, ground_mat);
-    wallBody1->SetPos(ChVector<>(-box_width / 2, 0, 0));
-    wallBody1->SetBodyFixed(true);
-    wallBody1->GetVisualShape(0)->SetMaterial(0, ground_mat_vis);
-    sys.Add(wallBody1);
+    // auto wallBody1 = chrono_types::make_shared<ChBodyEasyBox>(
+    //     box_thickness, box_height, box_width + box_thickness - 0.01, 1000, true, true, ground_mat);
+    // wallBody1->SetPos(ChVector<>(-box_width / 2, 0, 0));
+    // wallBody1->SetBodyFixed(true);
+    // wallBody1->GetVisualShape(0)->SetMaterial(0, ground_mat_vis);
+    // sys.Add(wallBody1);
 
-    auto wallBody2 = chrono_types::make_shared<ChBodyEasyBox>(
-        box_thickness, box_height, box_width + box_thickness - 0.01, 1000, false, true, ground_mat);
-    wallBody2->SetPos(ChVector<>(box_width / 2, 0, 0));
-    wallBody2->SetBodyFixed(true);
-    // wallBody2->GetVisualShape(0)->SetMaterial(0, ground_mat_vis);
-    sys.Add(wallBody2);
+    // auto wallBody2 = chrono_types::make_shared<ChBodyEasyBox>(
+    //     box_thickness, box_height, box_width + box_thickness - 0.01, 1000, false, true, ground_mat);
+    // wallBody2->SetPos(ChVector<>(box_width / 2, 0, 0));
+    // wallBody2->SetBodyFixed(true);
+    // // wallBody2->GetVisualShape(0)->SetMaterial(0, ground_mat_vis);
+    // sys.Add(wallBody2);
 
-    auto wallBody3 = chrono_types::make_shared<ChBodyEasyBox>(box_width + box_thickness - 0.01, box_height,
-                                                              box_thickness, 1000, true, true, ground_mat);
-    wallBody3->SetPos(ChVector<>(0, 0, -box_width / 2));
-    wallBody3->SetBodyFixed(true);
-    wallBody3->GetVisualShape(0)->SetMaterial(0, ground_mat_vis);
-    sys.Add(wallBody3);
+    // auto wallBody3 = chrono_types::make_shared<ChBodyEasyBox>(box_width + box_thickness - 0.01, box_height,
+    //                                                           box_thickness, 1000, true, true, ground_mat);
+    // wallBody3->SetPos(ChVector<>(0, 0, -box_width / 2));
+    // wallBody3->SetBodyFixed(true);
+    // wallBody3->GetVisualShape(0)->SetMaterial(0, ground_mat_vis);
+    // sys.Add(wallBody3);
 
-    auto wallBody4 = chrono_types::make_shared<ChBodyEasyBox>(box_width + box_thickness - 0.01, box_height,
-                                                              box_thickness, 1000, true, true, ground_mat);
-    wallBody4->SetPos(ChVector<>(0, 0, box_width / 2));
-    wallBody4->SetBodyFixed(true);
-    wallBody4->GetVisualShape(0)->SetMaterial(0, ground_mat_vis);
-    sys.Add(wallBody4);
+    // auto wallBody4 = chrono_types::make_shared<ChBodyEasyBox>(box_width + box_thickness - 0.01, box_height,
+    //                                                           box_thickness, 1000, true, true, ground_mat);
+    // wallBody4->SetPos(ChVector<>(0, 0, box_width / 2));
+    // wallBody4->SetBodyFixed(true);
+    // wallBody4->GetVisualShape(0)->SetMaterial(0, ground_mat_vis);
+    // sys.Add(wallBody4);
     return floorBody;
 }
 
@@ -366,8 +366,7 @@ void parsing_inputs_from_file(double& rod_radius,
                               double& simulation_time,
                               double& time_step,
                               double& excitation_frequency,
-                              double& excitation_amplitude,
-                              int& num_threads) {
+                              double& excitation_amplitude) {
 #ifdef _WIN32
     std::ifstream file("C:/Users/yjung/Documents/GitHub/chrono/build/bin/Release/inputs.txt");
 #endif
@@ -401,8 +400,6 @@ void parsing_inputs_from_file(double& rod_radius,
             iss >> excitation_frequency;
         } else if (key == "excitation_amplitude") {
             iss >> excitation_amplitude;
-        } else if (key == "num_threads") {
-            iss >> num_threads;
         }
     }
 }
@@ -442,10 +439,9 @@ int main(int argc, char* argv[]) {
     double time_step = 0.01;
     double excitation_frequency = 0;
     double excitation_amplitude = 0;
-    int num_threads = 1;
 
     parsing_inputs_from_file(rod_radius, rod_density, file_path, friction_coefficient, cohesion, visualize,
-                             simulation_time, time_step, excitation_frequency, excitation_amplitude,num_threads);
+                             simulation_time, time_step, excitation_frequency, excitation_amplitude);
 
     // void load_rods_from_file(ChSystemNSC& sys, std::string file_path, double rod_radius, double rod_length, double
     // rod_density, double box_height, double box_width, double box_thickness) {
@@ -454,7 +450,7 @@ int main(int argc, char* argv[]) {
     ChSystemNSC sys;
     // ChSystemMulticoreNSC sys;
 
-    sys.SetNumThreads(num_threads,num_threads,0);
+    // sys.SetNumThreads(20,20,0);
     // GetLog() << ChOMP::GetNumProcs() << " threads used.\n";
 
 
@@ -478,7 +474,6 @@ int main(int argc, char* argv[]) {
     std::cout << "time_step: " << time_step << std::endl;
     std::cout << "excitation_frequency: " << excitation_frequency << std::endl;
     std::cout << "excitation_amplitude: " << excitation_amplitude << std::endl;
-    std::cout << "num_threads: " << num_threads << std::endl;
 
     // Create all the rigid bodies.
     std::shared_ptr<chrono::ChBody> floorBody;
@@ -620,6 +615,112 @@ int main(int argc, char* argv[]) {
     GetLog() << "Start simulation" << '\n';
     GetLog() << "Number of bodies: " << sys.GetNbodies() << '\n';
     GetLog() << "Number of bodies: " << sys.Get_bodylist().size() << '\n';
+    // particle emitter
+    
+    ChParticleEmitter emitter;
+
+    // Ok, that object will take care of generating particle flows for you.
+    // It accepts a lot of settings, for creating many different types of particle
+    // flows, like fountains, outlets of various shapes etc.
+    // For instance, set the flow rate, etc:
+
+    emitter.ParticlesPerSecond() = 20;
+    emitter.SetUseParticleReservoir(true);
+    emitter.ParticleReservoirAmount() = 300;
+
+    // Our ChParticleEmitter object, among the main settings, it requires
+    // that you give him four 'randomizer' objects: one is in charge of
+    // generating random shapes, one is in charge of generating
+    // random positions, one for random alignments, and one for random velocities.
+    // In the following we need to instance such objects. (There are many ready-to-use
+    // randomizer objects already available in chrono, but note that you could also
+    // inherit your own class from these randomizers if the choice is not enough).
+
+    // ---Initialize the randomizer for positions
+    auto emitter_positions = chrono_types::make_shared<ChRandomParticlePositionRectangleOutlet>();
+    emitter_positions->Outlet() =
+        ChCoordsys<>(ChVector<>(0, box_height, 0), Q_from_AngAxis(CH_C_PI_2, VECT_X));  // center and alignment of the outlet
+    emitter_positions->OutletWidth() = 3.0;
+    emitter_positions->OutletHeight() = 4.5;
+    emitter.SetParticlePositioner(emitter_positions);
+    
+    // ---Initialize the randomizer for alignments
+    auto emitter_rotations = chrono_types::make_shared<ChRandomParticleAlignmentUniform>();
+    emitter.SetParticleAligner(emitter_rotations);
+
+    // ---Initialize the randomizer for velocities, with statistical distribution
+    auto mvelo = chrono_types::make_shared<ChRandomParticleVelocityConstantDirection>();
+    mvelo->SetDirection(-VECT_Y);
+    mvelo->SetModulusDistribution(0.0);
+    emitter.SetParticleVelocity(mvelo);
+
+    // ---Initialize the randomizer for creations, with statistical distribution
+
+    // Create a ChRandomShapeCreator object (ex. here for box particles)
+    auto mcreator_plastic = chrono_types::make_shared<ChRandomShapeCreatorCylinders>();
+    mcreator_plastic->SetDiameterDistribution(
+        chrono_types::make_shared<ChConstantDistribution>(0.5));
+    mcreator_plastic->SetLengthFactorDistribution(
+        chrono_types::make_shared<ChConstantDistribution>(200));    
+    mcreator_plastic->SetDensityDistribution(
+        chrono_types::make_shared<ChConstantDistribution>(8000));
+
+    mcreator_plastic->SetMaterial(mat);
+
+    // mcreator_plastic->SetXsizeDistribution(
+    //     chrono_types::make_shared<ChZhangDistribution>(0.5, 0.2));  // Zhang parameters: average val, min val.
+    // mcreator_plastic->SetSizeRatioZDistribution(chrono_types::make_shared<ChMinMaxDistribution>(0.2, 1.0));
+    // mcreator_plastic->SetSizeRatioYZDistribution(chrono_types::make_shared<ChMinMaxDistribution>(0.4, 1.0));
+    // mcreator_plastic->SetDensityDistribution(chrono_types::make_shared<ChConstantDistribution>(1000));
+
+    // Optional: define a callback to be exectuted at each creation of a box particle:
+    class MyCreator_plastic : public ChRandomShapeCreator::AddBodyCallback {
+        // Here do custom stuff on the just-created particle:
+      public:
+        virtual void OnAddBody(std::shared_ptr<ChBody> mbody,
+                               ChCoordsys<> mcoords,
+                               ChRandomShapeCreator& mcreator) override {
+            mbody->GetVisualShape(0)->SetColor(ChColor(0.0f, 1.0f, (float)ChRandom()));            
+            // mbody->SetEvalContactKf(true);
+            // mbody->SetEvalContactSf(true);
+        }
+    };
+    auto callback_plastic = chrono_types::make_shared<MyCreator_plastic>();
+    mcreator_plastic->RegisterAddBodyCallback(callback_plastic);
+
+    // Finally, tell to the emitter that it must use the creator above:
+    emitter.SetParticleCreator(mcreator_plastic);
+
+    // --- Optional: what to do by default on ALL newly created particles?
+    //     A callback executed at each particle creation can be attached to the emitter.
+    //     For example, we need that new particles will be bound to Irrlicht visualization:
+
+    // a- define a class that implement your custom OnAddBody method...
+    class MyCreatorForAll : public ChRandomShapeCreator::AddBodyCallback {
+      public:
+        virtual void OnAddBody(std::shared_ptr<ChBody> mbody,
+                               ChCoordsys<> mcoords,
+                               ChRandomShapeCreator& mcreator) override {
+            // Enable Irrlicht visualization for all particles
+            vis->BindItem(mbody);
+
+            // Disable gyroscopic forces for increased integrator stabilty
+            mbody->SetNoGyroTorque(true);
+            mbody->SetEvalContactCn(true);
+            mbody->SetEvalContactCt(true);
+            mbody->SetEvalContactKf(true);
+            mbody->SetEvalContactSf(true);
+        }
+        ChVisualSystemIrrlicht* vis;
+    };
+
+    // b- create the callback object...
+    auto mcreation_callback = chrono_types::make_shared<MyCreatorForAll>();
+    // c- set callback own data that he might need...
+    mcreation_callback->vis = vis.get();
+    // d- attach the callback to the emitter!
+    emitter.RegisterAddBodyCallback(mcreation_callback);
+
 
     // Simulation loop
     int frame = 0;

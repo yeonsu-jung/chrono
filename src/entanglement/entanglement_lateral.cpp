@@ -161,7 +161,6 @@ void load_rods_from_file(ChSystemNSC& sys,
     // mat->SetFriction(friction_coefficient);
     mat->SetSfriction(friction_coefficient);
     mat->SetKfriction(friction_coefficient*0.5);
-    mat->SetRollingFriction(1);
     mat->SetCohesion(cohesion);
     std::cout << "Loading rods from file: " << file_path << std::endl;
 
@@ -194,7 +193,7 @@ void load_rods_from_file(ChSystemNSC& sys,
         N_skip++;
     }
     myFile.close();
-    box_height = container_radius*4.01;
+    box_height = container_radius*2.5;
 
     int N = 0;
     myFile.open(file_path);
@@ -260,7 +259,6 @@ void load_rods_from_file(ChSystemNSC& sys,
     }
 }
 
-
 std::shared_ptr<chrono::ChBody> create_walls(ChSystemNSC& sys,
                                              double box_width,
                                              double box_height,
@@ -306,26 +304,6 @@ std::shared_ptr<chrono::ChBody> create_walls(ChSystemNSC& sys,
     topBody->SetEvalContactKf(true);
     topBody->SetEvalContactSf(true);
     sys.Add(topBody);
-    
-    // create walls placed cylindrically
-    // Parameters for the cylindrical wall boundary    
-    // int num_walls = 20;
-    // // Loop to create the walls
-    // for (int i = 0; i < num_walls; i++) {
-    //     double angle = i * 2.0 * CH_C_PI / num_walls;
-    //     auto wall = chrono_types::make_shared<ChBodyEasyBox>(box_thickness,
-    //                                                         box_height,
-    //                                                         box_width* tan(CH_C_PI / num_walls),
-    //                                                         1000,
-    //                                                         true,
-    //                                                         true,
-    //                                                         ground_mat);
-    //     wall->SetPos(ChVector<>(-box_width/2 * cos(angle), 0, box_width/2 * sin(angle)));
-    //     wall->SetRot(Q_from_AngAxis(angle, VECT_Y));
-    //     wall->SetBodyFixed(true);        
-    //     wall->GetVisualShape(0)->SetMaterial(0, ground_mat_vis);
-    //     sys.Add(wall);
-    // }
 
     auto wallBody1 = chrono_types::make_shared<ChBodyEasyBox>(
         box_thickness, box_height, box_width + box_thickness - 0.01, 1000, true, true, ground_mat);
@@ -366,8 +344,7 @@ void parsing_inputs_from_file(double& rod_radius,
                               double& simulation_time,
                               double& time_step,
                               double& excitation_frequency,
-                              double& excitation_amplitude,
-                              int& num_threads) {
+                              double& excitation_amplitude) {
 #ifdef _WIN32
     std::ifstream file("C:/Users/yjung/Documents/GitHub/chrono/build/bin/Release/inputs.txt");
 #endif
@@ -401,8 +378,6 @@ void parsing_inputs_from_file(double& rod_radius,
             iss >> excitation_frequency;
         } else if (key == "excitation_amplitude") {
             iss >> excitation_amplitude;
-        } else if (key == "num_threads") {
-            iss >> num_threads;
         }
     }
 }
@@ -442,10 +417,9 @@ int main(int argc, char* argv[]) {
     double time_step = 0.01;
     double excitation_frequency = 0;
     double excitation_amplitude = 0;
-    int num_threads = 1;
 
     parsing_inputs_from_file(rod_radius, rod_density, file_path, friction_coefficient, cohesion, visualize,
-                             simulation_time, time_step, excitation_frequency, excitation_amplitude,num_threads);
+                             simulation_time, time_step, excitation_frequency, excitation_amplitude);
 
     // void load_rods_from_file(ChSystemNSC& sys, std::string file_path, double rod_radius, double rod_length, double
     // rod_density, double box_height, double box_width, double box_thickness) {
@@ -454,7 +428,7 @@ int main(int argc, char* argv[]) {
     ChSystemNSC sys;
     // ChSystemMulticoreNSC sys;
 
-    sys.SetNumThreads(num_threads,num_threads,0);
+    // sys.SetNumThreads(20,20,0);
     // GetLog() << ChOMP::GetNumProcs() << " threads used.\n";
 
 
@@ -478,7 +452,6 @@ int main(int argc, char* argv[]) {
     std::cout << "time_step: " << time_step << std::endl;
     std::cout << "excitation_frequency: " << excitation_frequency << std::endl;
     std::cout << "excitation_amplitude: " << excitation_amplitude << std::endl;
-    std::cout << "num_threads: " << num_threads << std::endl;
 
     // Create all the rigid bodies.
     std::shared_ptr<chrono::ChBody> floorBody;
@@ -489,8 +462,8 @@ int main(int argc, char* argv[]) {
 
     auto vis = chrono_types::make_shared<ChVisualSystemIrrlicht>();
     if (visualize) {
-        ChVector<> camera_position(0, -box_height/2 + container_height/2, container_radius*2.2);
-        ChVector<> look_at(0, -box_height/2 + container_height/2, -container_radius*2.2);
+        ChVector<> camera_position(0, -box_height/2, 2 * rod_length);       
+        ChVector<> look_at(0, -box_height/2, -2 * rod_length);
 
         vis->AttachSystem(&sys);
         vis->SetWindowSize(800, 600);
@@ -671,12 +644,12 @@ int main(int argc, char* argv[]) {
             sys.GetContactContainer()->ReportAllContacts(creporter);
 
             // initial waiting
-            if (sys.GetChTime() < 5) {
+            if (sys.GetChTime() < 3) {
                 sys.Set_G_acc(ChVector<>(0, -9.8, 0));
                 sys.DoStepDynamics(0.01);
             } else {
                 sys.Set_G_acc(
-                    ChVector<>(0, -9.8 + excitation_amplitude * cos(CH_C_2PI * excitation_frequency * sys.GetChTime()), 0));
+                    ChVector<>(excitation_amplitude * cos(CH_C_2PI * excitation_frequency * sys.GetChTime()), -9.8, 0));
                 sys.DoStepDynamics(time_step);
             }
 

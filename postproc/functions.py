@@ -1,3 +1,6 @@
+import os
+import numpy as np
+import pathlib as Path
 
 # %%
 def my_float(field):
@@ -69,6 +72,10 @@ def count_lines(filename):
     output = subprocess.check_output(['wc', '-l', filename]).decode('utf-8')
     return int(output.split()[0])
 
+def count_lines2(filename):
+    return sum(1 for line in open(filename))
+
+
 def check_dump_file(filename):
     # information about the dump file
     # num of atoms
@@ -81,7 +88,7 @@ def check_dump_file(filename):
     with open(filename, 'r') as f:
         f.readline()
 
-    total_num_rows = count_lines(filename)
+    total_num_rows = count_lines2(filename)
 
     variables = read_flag_line(filename, 'ITEM: ATOMS').split()[2:]
     num_time_steps = int(total_num_rows/(row2-row1))
@@ -118,21 +125,35 @@ def read_lines_from_file2(filename, start, end):
 # read_lines_from_file2(fname, 0,5)
 
 # %%
+import itertools
+
 def get_data_from_dump(filename,last_chunk,chunks_to_skip):
     row1, row2 = find_lines_between_two_flags(filename, 'ITEM: TIME', 'ITEM: TIME')
     num_rows_in_chunk = row2-row1
     
     slices = [(i*num_rows_in_chunk,i*num_rows_in_chunk+num_rows_in_chunk-1) for i in range(0,last_chunk,chunks_to_skip)]
-    chunks = []
-    for (s1,s2) in slices:
-        # print(all_lines[s1:s2])
-        chunk = []        
-        for line in read_lines_from_file2(filename, s1, s2):
-            # if line.startswith('ITEM:'):
-            #     continue
-            chunk.append((line.split()))
-        chunks.append(chunk)
+    chunks = []    
+    
+    with open(filename) as f:
+        for s1, s2 in slices:
+            chunk_lines = itertools.islice(f, s1, s2)
+            chunk = [line.split() for line in chunk_lines if not line.startswith('ITEM:')]
+            chunks.append(chunk)
+            print(len(chunks))
+                
     return chunks
+    
+    # for (s1,s2) in slices:
+    #     # print(all_lines[s1:s2])
+    #     chunk = []        
+    #     for line in read_lines_from_file2(filename, s1, s2):
+    #         # if line.startswith('ITEM:'):
+    #         #     continue
+    #         chunk.append((line.split()))
+            
+    #     chunks.append(chunk)
+    #     print(len(chunks))
+    # return chunks
 
 # %%
 def read_inputs(foldername):
@@ -143,12 +164,91 @@ def read_inputs(foldername):
             inputs[key] = value.strip()
     return inputs
 
-import yaml
+# import yaml
 # read yaml file
-def read_metadata(foldername):
-    with open(foldername + '/metadata.yaml') as f:
+def read_metadata(filename):
+    with open(filename) as f:
         inputs = {}
         for line in f:
             key, value = line.split(' ')
             inputs[key] = value.strip()
     return inputs
+
+
+def find_dropbox_path():
+    if os.name == 'nt':
+        dropbox_path = 'C:/Users/yjung/Dropbox (Harvard University)/Entangled/Sims'
+    elif os.name == 'posix':
+        dropbox_path = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims'
+    return dropbox_path
+
+def change_path_across_platforms(path):    
+    # if posix path
+    if (os.path.sep == '/') & (os.name == 'nt'):
+        path = path.replace('/Users/', 'C:/Users/')
+        path = path.replace('yeonsu', 'yjung')        
+    elif (os.path.sep == '\\') & (os.name == 'posix'):
+        path = path.replace('\\', '/')
+        path = path.replace('yjung', 'yeonsu')
+        path = path.replace('C:\\','/')
+    return path
+
+
+
+def read_data(filename,start_chunk,last_chunk,chunks_to_skip):    
+    chunks_to_read = range(start_chunk,last_chunk,chunks_to_skip)
+    count = -1
+    chunks = []
+    with open(filename) as f:
+        # whenever meets 'ITEM: TIME', count it and check if it's the chunk we want to read
+        chunk = []
+        for i, line in enumerate(f):
+            if line.startswith('ITEM: TIME'):                
+                count += 1                
+                if count-1 in chunks_to_read:
+                    chunks.append(chunk)
+                    chunk = []
+                    print(f"{len(chunks)}",end='\r')
+                if count in chunks_to_read:
+                    chunk.append(line.strip('\n').split())
+            elif count in chunks_to_read:
+                chunk.append(line.strip('\n').split())
+            if count == last_chunk:
+                break                
+    return chunks
+
+# should deprecate these?
+def read_contact_data(foldername,last_chunk,chunks_to_skip):
+    filename = foldername + '/contacts.txt'
+    chunks_to_read = range(0,last_chunk,chunks_to_skip)
+    count = -1
+    chunks = []
+    with open(filename) as f:
+        # whenever meets 'ITEM: TIME', count it and check if it's the chunk we want to read
+        chunk = []
+        for i, line in enumerate(f):
+            if line.startswith('ITEM: TIME'):
+                count += 1
+                if count-1 in chunks_to_read:
+                    chunks.append(chunk)
+                    chunk = []
+                if count in chunks_to_read:
+                    chunk.append(line.rstrip('\n'))
+            elif count in chunks_to_read:
+                chunk.append(line.rstrip('\n'))
+            
+    return chunks
+
+def split_chunks(chunks):
+    column_names = chunks[0][0].split()[2:]
+    timesteps = [chunk[0].split()[0] for chunk in chunks]
+    num_atoms = [chunk[0].split()[1] for chunk in chunks]
+    data = [chunk[1:] for chunk in chunks]
+    return data, column_names, timesteps, num_atoms
+
+def split_rows(chunks):
+    chunk2 = []
+    for chunk in chunks:
+        chunk2.append([row.split() for row in chunk])
+        print(f"{len(chunk2)}",end='\r')
+    return chunk2
