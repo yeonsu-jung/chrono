@@ -49,6 +49,46 @@
 #include <string>
 #include <chrono>
 
+// struct MyContact {
+//     ChVector<> pA;      // Contact point on shape A
+//     ChVector<> pB;      // Contact point on shape B
+//     ChVector<> forces;  // Total reaction forces on both shapes
+//     ChVector<> torques; // Total reaction torques on both shapes
+//     int num_contacts;   // Number of individual contacts merged into this MyContact object
+// };
+
+// void MyContactCallback(ChCollisionInfo& contactinfo, ChMaterialCouple& materialcouple, ChContactContainer*
+// contactcontainer) {
+//     // Get the collision shapes involved in the contact
+//     ChCollisionModel* modelA = contactinfo.modelA;
+//     ChCollisionModel* modelB = contactinfo.modelB;
+
+//     // Calculate the total reaction forces and torques on both shapes
+//     ChVector<> forces = contactinfo.vpA.GetNormal() * contactinfo.vN;
+//     ChVector<> torques = Vcross(contactinfo.vpA - modelA->GetContactPoint(), forces);
+
+//     // Check if we have already processed contacts between these shapes
+//     auto it = contact_map.find({modelA, modelB});
+//     if (it == contact_map.end()) {
+//         // This is the first contact between these shapes, create a new MyContact object
+//         MyContact contact;
+//         contact.pA = contactinfo.vpA;
+//         contact.pB = contactinfo.vpB;
+//         contact.forces = forces;
+//         contact.torques = torques;
+//         contact.num_contacts = 1;
+//         contact_map[{modelA, modelB}] = contact;
+//     } else {
+//         // We have already processed contacts between these shapes, update the existing MyContact object
+//         MyContact& contact = it->second;
+//         contact.pA = (contact.pA * contact.num_contacts + contactinfo.vpA) / (contact.num_contacts + 1);
+//         contact.pB = (contact.pB * contact.num_contacts + contactinfo.vpB) / (contact.num_contacts + 1);
+//         contact.forces += forces;
+//         contact.torques += torques;
+//         contact.num_contacts++;
+//     }
+// }
+
 bool copy_file(const std::string& source_path, const std::string& dest_path) {
     // Open source file
     FILE* source_file = fopen(source_path.c_str(), "rb");
@@ -142,6 +182,121 @@ void write_rod_data(ChSystemNSC& sys, std::ofstream& out_file) {
     }
 }
 
+struct ContactInfo {
+    ChVector<> pA;       // Contact location
+    ChVector<> pB;       // Contact location
+    double depth;        // Penetration depth
+    ChQuaternion<> rot;  // Contact plane quaternion
+    ChVector<> forces;   // Reaction forces
+    ChVector<> torques;  // Reaction torques
+    int count;           // Number of contact points
+};
+
+class ContactReporter : public ChContactContainer::ReportContactCallback {
+  public:
+    ContactReporter() {}
+    // ContactReporter(std::ofstream& contact_outfile) { _contact_outfile = contact_outfile; }
+    // ContactReporter(std::ofstream& contact_outfile) : _contact_outfile(contact_outfile) {}
+
+  private:
+    virtual bool OnReportContact(const ChVector<>& pA,
+                                 const ChVector<>& pB,
+                                 const ChMatrix33<>& plane_coord,
+                                 const double& distance,
+                                 const double& eff_radius,
+                                 const ChVector<>& cforce,
+                                 const ChVector<>& ctorque,
+                                 ChContactable* modA,
+                                 ChContactable* modB) override {
+        int idA = modA->GetPhysicsItem()->GetIdentifier();
+        int idB = modB->GetPhysicsItem()->GetIdentifier();
+
+        assert(idA < idB);
+        std::pair<int, int> key = std::make_pair(idA, idB);
+        ContactInfo& info = contact_map[key];
+
+        ChQuaternion<> quat = plane_coord.Get_A_quaternion();
+
+        info.pA += pA;
+        info.pB += pB;
+        info.depth += distance;
+        info.rot += quat;
+        info.forces += cforce;
+        info.torques += ctorque;
+        info.count += 1;
+
+        // write to file
+        // _contact_outfile << "ITEM: CONTACTS\n";
+        // _contact_outfile << "id1 id2 pAx pAy pAz pBx pBy pBz pc00 pc01 pc02 pc10 pc11 pc12 pc20 pc21 pc22 overlap
+        // eff_radius cfx cfy cfz ctau_x ctau_y ctau_z\n"; _contact_outfile << modA->GetPhysicsItem() << " " <<
+        // modB->GetPhysicsItem() << " " << pA.x() << " " << pA.y()
+        //                     << " " << pA.z() << " " << pB.x() << " " << pB.y() << " " << pB.z() << " " <<
+        //                     plane_coord(0, 0)
+        //                     << " " << plane_coord(0, 1) << " " << plane_coord(0, 2) << " " << plane_coord(1, 0) << "
+        //                     "
+        //                     << plane_coord(1, 1) << " " << plane_coord(1, 2) << " " << plane_coord(2, 0) << " "
+        //                     << plane_coord(2, 1) << " " << plane_coord(2, 2) << " " << distance << " " << eff_radius
+        //                     << " "
+        //                     << cforce.x() << " " << cforce.y() << " " << cforce.z() << " " << ctorque.x() << " "
+        //                     << ctorque.y() << " " << ctorque.z() << '\n';
+
+        return true;
+    }
+
+    std::map<std::pair<int, int>, ContactInfo> contact_map;
+    int num_contacts = 0;
+
+  public:
+    void calculate_contact_averages() {
+        for (auto& pair : contact_map) {
+            ContactInfo& info = pair.second;
+            double inv_count = 1.0 / info.count;
+            info.pA *= inv_count;
+            info.pB *= inv_count;
+            info.depth *= inv_count;
+            info.rot *= inv_count;
+            info.rot.Normalize();
+            info.forces *= inv_count;
+            info.torques *= inv_count;
+        }
+        num_contacts = contact_map.size();
+    }
+
+    virtual void flush_contact_map() { contact_map.clear(); }
+    int get_num_contacts() { return num_contacts; }
+    void write_contact_data(std::ofstream& out_file, double current_time, int num_contacts) {
+        out_file << "ITEM: TIMESTEP\n" << current_time << "\n";
+        out_file << "ITEM: NUMBER OF CONTACTS\n" << num_contacts << "\n";
+        out_file << "ITEM: CONTACTS\n";
+        out_file << "id1 id2 pA1 pA2 pA3 pB1 pB2 pB3 pc00 pc01 pc02 pc10 pc11 pc12 pc20 pc21 pc22 distance "
+                    "cf1 cf2 cf3 ctau1 ctau2 ctau3\n";
+
+        for (auto& pair : contact_map) {
+            ContactInfo& info = pair.second;
+            ChMatrix33<> plane_coord;
+            plane_coord.Set_A_quaternion(info.rot);
+            out_file << pair.first.first << " " << pair.first.second << " " << info.pA.x() << " " << info.pA.y() << " "
+                     << info.pA.z() << " " << info.pB.x() << " " << info.pB.y() << " " << info.pB.z() << " "
+                     << plane_coord(0, 0) << " " << plane_coord(0, 1) << " " << plane_coord(0, 2) << " "
+                     << plane_coord(1, 0) << " " << plane_coord(1, 1) << " " << plane_coord(1, 2) << " "
+                     << plane_coord(2, 0) << " " << plane_coord(2, 1) << " " << plane_coord(2, 2) << " " << info.depth
+                     << " " << info.forces.x() << " " << info.forces.y() << " " << info.forces.z() << " "
+                     << info.torques.x() << " " << info.torques.y() << " " << info.torques.z() << '\n';
+        }
+    }
+    // std::ofstream& _contact_outfile;
+};
+
+// void write_contact_data(ChSystemNSC& sys, std::ofstream& out_file, ContactReporter& creporter) {
+//     out_file << "ITEM: TIMESTEP\n" << sys.GetChTime() << "\n";
+//     out_file << "ITEM: NUMBER OF CONTACTS\n" << sys.GetNcontacts() << "\n";
+//     out_file << "ITEM: CONTACTS id1 id2 x y z nx ny nz dist\n";
+//     out_file << "id1 id2 pA.x pA.y pA.z pB.x pB.y pB.z pc00 pc01 pc02 pc10 pc11 pc12 pc20 pc21 pc22 distance "
+//                 "eff_radius cfx cfy cfz ctau_x ctau_y ctau_z\n";
+
+//     sys.GetContactContainer()->ReportAllContacts(creporter);
+// }
+
 void load_rods_from_file(ChSystemNSC& sys,
                          const std::string file_path,
                          const double& friction_coefficient,
@@ -160,7 +315,7 @@ void load_rods_from_file(ChSystemNSC& sys,
     auto mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
     // mat->SetFriction(friction_coefficient);
     mat->SetSfriction(friction_coefficient);
-    mat->SetKfriction(friction_coefficient*0.5);
+    mat->SetKfriction(friction_coefficient * 0.5);
     mat->SetRollingFriction(1);
     mat->SetCohesion(cohesion);
     std::cout << "Loading rods from file: " << file_path << std::endl;
@@ -194,7 +349,7 @@ void load_rods_from_file(ChSystemNSC& sys,
         N_skip++;
     }
     myFile.close();
-    box_height = container_radius*4.01;
+    box_height = container_radius * 4.01;
 
     int N = 0;
     myFile.open(file_path);
@@ -260,7 +415,6 @@ void load_rods_from_file(ChSystemNSC& sys,
     }
 }
 
-
 std::shared_ptr<chrono::ChBody> create_walls(ChSystemNSC& sys,
                                              double box_width,
                                              double box_height,
@@ -272,7 +426,7 @@ std::shared_ptr<chrono::ChBody> create_walls(ChSystemNSC& sys,
     auto ground_mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
     ground_mat->SetFriction(friction_coefficient);
     ground_mat->SetSfriction(friction_coefficient);
-    ground_mat->SetKfriction(friction_coefficient*0.5);
+    ground_mat->SetKfriction(friction_coefficient * 0.5);
     ground_mat->SetCohesion(cohesion);
 
     auto ground_mat_vis = chrono_types::make_shared<ChVisualMaterial>(*ChVisualMaterial::Default());
@@ -306,9 +460,9 @@ std::shared_ptr<chrono::ChBody> create_walls(ChSystemNSC& sys,
     topBody->SetEvalContactKf(true);
     topBody->SetEvalContactSf(true);
     sys.Add(topBody);
-    
+
     // create walls placed cylindrically
-    // Parameters for the cylindrical wall boundary    
+    // Parameters for the cylindrical wall boundary
     // int num_walls = 20;
     // // Loop to create the walls
     // for (int i = 0; i < num_walls; i++) {
@@ -322,7 +476,7 @@ std::shared_ptr<chrono::ChBody> create_walls(ChSystemNSC& sys,
     //                                                         ground_mat);
     //     wall->SetPos(ChVector<>(-box_width/2 * cos(angle), 0, box_width/2 * sin(angle)));
     //     wall->SetRot(Q_from_AngAxis(angle, VECT_Y));
-    //     wall->SetBodyFixed(true);        
+    //     wall->SetBodyFixed(true);
     //     wall->GetVisualShape(0)->SetMaterial(0, ground_mat_vis);
     //     sys.Add(wall);
     // }
@@ -445,7 +599,7 @@ int main(int argc, char* argv[]) {
     int num_threads = 1;
 
     parsing_inputs_from_file(rod_radius, rod_density, file_path, friction_coefficient, cohesion, visualize,
-                             simulation_time, time_step, excitation_frequency, excitation_amplitude,num_threads);
+                             simulation_time, time_step, excitation_frequency, excitation_amplitude, num_threads);
 
     // void load_rods_from_file(ChSystemNSC& sys, std::string file_path, double rod_radius, double rod_length, double
     // rod_density, double box_height, double box_width, double box_thickness) {
@@ -454,9 +608,8 @@ int main(int argc, char* argv[]) {
     ChSystemNSC sys;
     // ChSystemMulticoreNSC sys;
 
-    sys.SetNumThreads(num_threads,num_threads,0);
+    sys.SetNumThreads(num_threads, num_threads, 0);
     // GetLog() << ChOMP::GetNumProcs() << " threads used.\n";
-
 
     // TO DO: consider using a class to pass geometric, mechanical parameters - must I?
 
@@ -489,8 +642,8 @@ int main(int argc, char* argv[]) {
 
     auto vis = chrono_types::make_shared<ChVisualSystemIrrlicht>();
     if (visualize) {
-        ChVector<> camera_position(0, -box_height/2 + container_height/2, container_radius*2.2);
-        ChVector<> look_at(0, -box_height/2 + container_height/2, -container_radius*2.2);
+        ChVector<> camera_position(0, -box_height / 2 + container_height / 2, container_radius * 2.2);
+        ChVector<> look_at(0, -box_height / 2 + container_height / 2, -container_radius * 2.2);
 
         vis->AttachSystem(&sys);
         vis->SetWindowSize(800, 600);
@@ -510,41 +663,11 @@ int main(int argc, char* argv[]) {
 
     // Modify some setting of the physical system for the simulation, if you want
 
-    // sys.SetSolverType(ChSolver::Type::MINRES);    
+    // sys.SetSolverType(ChSolver::Type::MINRES);
     // sys.SetSolverMaxIterations(5);
 
     sys.SetSolverType(ChSolver::Type::BARZILAIBORWEIN);
     sys.SetSolverMaxIterations(40);
-
-    class ContactReporter : public ChContactContainer::ReportContactCallback {
-      public:
-        // ContactReporter() {}
-        // ContactReporter(std::ofstream& contact_outfile) { _contact_outfile = contact_outfile; }
-        ContactReporter(std::ofstream& contact_outfile) : _contact_outfile(contact_outfile) {}
-
-      private:
-        virtual bool OnReportContact(const ChVector<>& pA,
-                                     const ChVector<>& pB,
-                                     const ChMatrix33<>& plane_coord,
-                                     const double& distance,
-                                     const double& eff_radius,
-                                     const ChVector<>& cforce,
-                                     const ChVector<>& ctorque,
-                                     ChContactable* modA,
-                                     ChContactable* modB) override {
-            // write to file
-            _contact_outfile << pA.x() << " " << pA.y() << " " << pA.z() << " " << pB.x() << " " << pB.y() << " "
-                             << pB.z() << " " << plane_coord(0, 0) << " " << plane_coord(0, 1) << " "
-                             << plane_coord(0, 2) << " " << plane_coord(1, 0) << " " << plane_coord(1, 1) << " "
-                             << plane_coord(1, 2) << " " << plane_coord(2, 0) << " " << plane_coord(2, 1) << " "
-                             << plane_coord(2, 2) << " " << distance << " " << eff_radius << " " << cforce.x() << " "
-                             << cforce.y() << " " << cforce.z() << " " << ctorque.x() << " " << ctorque.y() << " "
-                             << ctorque.z() << " " << modA->GetPhysicsItem()->GetIdentifier() << " "
-                             << modB->GetPhysicsItem()->GetIdentifier() << '\n';
-            return true;
-        }
-        std::ofstream& _contact_outfile;
-    };
 
 #ifdef _WIN32
     size_t found = file_path.find_last_of("/\\");
@@ -615,7 +738,8 @@ int main(int argc, char* argv[]) {
     std::ofstream contact_outfile;
     contact_outfile.open(newDirPath + "/contacts.txt");
 
-    auto creporter = chrono_types::make_shared<ContactReporter>(contact_outfile);
+    // auto creporter = chrono_types::make_shared<ContactReporter>(contact_outfile);
+    auto creporter = chrono_types::make_shared<ContactReporter>();
 
     GetLog() << "Start simulation" << '\n';
     GetLog() << "Number of bodies: " << sys.GetNbodies() << '\n';
@@ -623,7 +747,7 @@ int main(int argc, char* argv[]) {
 
     // Simulation loop
     int frame = 0;
-    const int FLUSH_INTERVAL = 5000;
+    const int FLUSH_INTERVAL = 1;
     auto start_time = std::chrono::high_resolution_clock::now();
 
     // bool test = true;
@@ -639,14 +763,15 @@ int main(int argc, char* argv[]) {
     //             sys.DoStepDynamics(0.01);
     //         } else {
     //             sys.Set_G_acc(
-    //                 ChVector<>(0, -9.8 + excitation_amplitude * cos(CH_C_2PI * excitation_frequency * sys.GetChTime()), 0));
+    //                 ChVector<>(0, -9.8 + excitation_amplitude * cos(CH_C_2PI * excitation_frequency *
+    //                 sys.GetChTime()), 0));
     //             sys.DoStepDynamics(time_step);
     //         }
 
     //         auto end_time = std::chrono::high_resolution_clock::now();
     //         if (sys.GetChTime() > 5) {
     //             std::chrono::duration<double> elapsed_time = end_time - start_time;
-    //             GetLog() << "\nElapsed time: " << elapsed_time.count() << '\n';                
+    //             GetLog() << "\nElapsed time: " << elapsed_time.count() << '\n';
     //             break;
     //         }
 
@@ -663,11 +788,19 @@ int main(int argc, char* argv[]) {
                      << "Number of contacts: " << sys.GetNcontacts();
 
             write_rod_data(sys, out_file);
+
             // write contact data
             contact_outfile << "ITEM: TIMESTEP\n" << sys.GetChTime() << "\n";
             contact_outfile << "ITEM: NUMBER OF CONTACTS\n" << sys.GetNcontacts() << "\n";  // is this necessary?
             contact_outfile << "pA.x pA.y pA.z pB.x pB.y pB.z pc00 pc01 pc02 pc10 pc11 pc12 pc20 pc21 pc22 distance "
                                "eff_radius cfx cfy cfz ctau_x ctau_y ctau_z\n";
+
+            // out_file << "ITEM: TIMESTEP\n" << sys.GetChTime() << "\n";
+            // out_file << "ITEM: NUMBER OF CONTACTS\n" << sys.GetNcontacts() << "\n";
+            // out_file << "ITEM: CONTACTS id1 id2 x y z nx ny nz dist\n";
+            // out_file << "id1 id2 pA1 pA2 pA3 pB1 pB2 pB3 pc00 pc01 pc02 pc10 pc11 pc12 pc20 pc21 pc22 overlap "
+            // "eff_radius cfx cfy cfz ctau_x ctau_y ctau_z\n";
+
             sys.GetContactContainer()->ReportAllContacts(creporter);
 
             // initial waiting
@@ -675,8 +808,8 @@ int main(int argc, char* argv[]) {
                 sys.Set_G_acc(ChVector<>(0, -9.8, 0));
                 sys.DoStepDynamics(0.01);
             } else {
-                sys.Set_G_acc(
-                    ChVector<>(0, -9.8 + excitation_amplitude * cos(CH_C_2PI * excitation_frequency * sys.GetChTime()), 0));
+                sys.Set_G_acc(ChVector<>(
+                    0, -9.8 + excitation_amplitude * cos(CH_C_2PI * excitation_frequency * sys.GetChTime()), 0));
                 sys.DoStepDynamics(time_step);
             }
 
@@ -698,19 +831,26 @@ int main(int argc, char* argv[]) {
 
             write_rod_data(sys, out_file);
             // write contact data
-            contact_outfile << "ITEM: TIMESTEP\n" << sys.GetChTime() << "\n";
-            contact_outfile << "ITEM: NUMBER OF CONTACTS\n" << sys.GetNcontacts() << "\n";  // is this necessary?
-            contact_outfile << "pA.x pA.y pA.z pB.x pB.y pB.z pc00 pc01 pc02 pc10 pc11 pc12 pc20 pc21 pc22 distance "
-                               "eff_radius cfx cfy cfz ctau_x ctau_y ctau_z\n";
+            // contact_outfile << "ITEM: TIMESTEP\n" << sys.GetChTime() << "\n";
+            // contact_outfile << "ITEM: NUMBER OF CONTACTS\n" << sys.GetNcontacts() << "\n";  // is this necessary?
+            // contact_outfile << "pA.x pA.y pA.z pB.x pB.y pB.z pc00 pc01 pc02 pc10 pc11 pc12 pc20 pc21 pc22 distance "
+            //                    "eff_radius cfx cfy cfz ctau_x ctau_y ctau_z\n";
+
             sys.GetContactContainer()->ReportAllContacts(creporter);
+            creporter->calculate_contact_averages();
+            creporter->write_contact_data(contact_outfile,
+                                            sys.GetChTime(), // current time
+                                            creporter->get_num_contacts()); // number of contacts
+                                            
+            creporter->flush_contact_map();
 
             // initial waiting
             if (sys.GetChTime() < 3) {
                 sys.Set_G_acc(ChVector<>(0, -9.8, 0));
                 sys.DoStepDynamics(0.01);
             } else {
-                sys.Set_G_acc(
-                    ChVector<>(0, -9.8 + excitation_amplitude * cos(CH_C_2PI * excitation_frequency * sys.GetChTime()), 0));
+                sys.Set_G_acc(ChVector<>(
+                    0, -9.8 + excitation_amplitude * cos(CH_C_2PI * excitation_frequency * sys.GetChTime()), 0));
                 sys.DoStepDynamics(time_step);
             }
 
