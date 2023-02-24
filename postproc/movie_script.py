@@ -28,6 +28,7 @@ from vapory import *
 # root.destroy()
 # foldername = os.path.dirname(filename)
 foldername = r'C:\Users\yjung\Dropbox (Harvard University)\Entangled\Sims\alpha76.0_RandomRods_Alpha76_N1193_Date2023-02-22_01-36-22_tstep_1.00simtime_1.00'
+foldername = r'C:\Users\yjung\Dropbox (Harvard University)\Entangled\Sims\alpha125.0_RandomRods_Alpha125_N1963_Date2023-02-22_01-42-01_tstep_5.00simtime_5.00 (3)'
 
 # foldername = 'C:/Users/yjung/Dropbox (Harvard University)/Entangled/Sims/alpha38.0_RandomRods_Alpha38_N596_Date2023-02-22_01-17-05_tstep_1.00simtime_1.00 (1)'
 # foldername = 'C:/Users/yjung/Dropbox (Harvard University)/Entangled/Sims/alpha125.0_RandomRods_Alpha125_N392_Date2023-02-14_23-25-09_tstep_1.00simtime_1.00 (3)'
@@ -146,8 +147,29 @@ for i,chunk in enumerate(motion_chunks):
     scene.render(f'{dir_name}/img_{i:04d}.png', width=800, height=600, antialiasing=0.0001)
 
 # %%
+for i,chunk in enumerate(motion_chunks):
+    df = [my_float_list(line) for line in chunk[5:]]
+    df = np.array(df)
+    # remove nan rows
+    nan_rows = np.isnan(df).any(axis=1)
+    df = df[~nan_rows]    
 
+    cylinders = []
+    for each_rod_data in df[:-6]:
+        cen = each_rod_data[2:5]        
+        quaternion = each_rod_data[8:12]
+        ori = quaternion_vector_rotation(quaternion, (0.0, 1.0, 0.0))
+        base = [cen[0]-ori[0]*rod_length/2, cen[1]-ori[1]*rod_length/2, cen[2]-ori[2]*rod_length/2]
+        cap = [cen[0]+ori[0]*rod_length/2, cen[1]+ori[1]*rod_length/2, cen[2]+ori[2]*rod_length/2]
+        
+        cylinders.append(Cylinder( base, cap, rod_radius, Texture( Pigment( 'color', [1,0,1] ))))
 
+    scene = Scene( camera, objects= [light, *cylinders, bgd])
+    with open(f'{dir_name}/img_{i:04d}.pov', 'w') as f:
+        f.write(str(scene))
+    
+
+# %%
 # N = len(contact_chunks)
 # df_list = []
 # for i0,chunk in enumerate(contact_chunks):    

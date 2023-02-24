@@ -199,7 +199,7 @@ def read_data(filename,start_chunk,last_chunk,chunks_to_skip):
     chunks_to_read = range(start_chunk,last_chunk,chunks_to_skip)
     count = -1
     chunks = []
-    with open(filename) as f:
+    with open(filename,'r') as f:
         # whenever meets 'ITEM: TIME', count it and check if it's the chunk we want to read
         chunk = []
         for i, line in enumerate(f):
