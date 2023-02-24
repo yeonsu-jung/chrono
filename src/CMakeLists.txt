@@ -14,7 +14,7 @@ option(ENABLE_MODULE_OPENGL "Enanble OpenGL module" OFF)
 option(BUILD_ENTANGLEMENT "Entanglement simulation" ON)
 option(BUILD_ENTANGLEMENT_FEA "Entanglement FEA simulation" ON)
 option(BUILD_YJUNG "Yeonsu Jung's addition" OFF)
-option(BUILD_DEMOS "Build demo programs" OFF)
+option(BUILD_DEMOS "Build demo programs" ON)
 option(BUILD_BENCHMARKING "Build benchmark tests" OFF)
 option(BUILD_DEMOS_MBS "Build demo programs for MBS module" OFF)
 

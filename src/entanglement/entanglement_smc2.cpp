@@ -314,11 +314,11 @@ void load_rods_from_file(ChSystemSMC& sys,
 
     auto mat = chrono_types::make_shared<ChMaterialSurfaceSMC>();
     // mat->SetFriction(friction_coefficient);
-    mat->SetKn(350);  // contact normal stiffness
-    mat->SetKt(350);  // contact tangential stiffness
+    mat->SetKn(35000);  // contact normal stiffness
+    mat->SetKt(35000);  // contact tangential stiffness
     mat->SetGn(25);   // contact normal damping
     mat->SetGt(25);   // contact tangential damping
-    mat->SetFriction(0.2f);
+    mat->SetFriction(0.4f);
     
     std::cout << "Loading rods from file: " << file_path << std::endl;
 
@@ -398,7 +398,7 @@ void load_rods_from_file(ChSystemSMC& sys,
             chrono_types::make_shared<collision::ChCollisionModelBullet>());
         double local_factor = 1;
         rod->SetPos(ChVector<>((v[0] + v[3]) / 2 * local_factor,
-                               (v[2] + v[5]) / 2 * local_factor - box_height / 2 + rod_radius * 0.1,
+                               (v[2] + v[5]) / 2 * local_factor - box_height / 2 + rod_radius * 2,
                                (v[1] + v[4]) / 2 * local_factor));
         // rod->SetPos(ChVector<>((v[0]*factor*5,v[1]*factor*5,v[2]*factor*5)));
         rod->GetVisualShape(0)->SetTexture(GetChronoDataFile("textures/rock.jpg"));
@@ -426,11 +426,11 @@ std::shared_ptr<chrono::ChBody> create_walls(ChSystemSMC& sys,
                                              double cohesion) {
     // Contact and visualization materials for container
     auto ground_mat = chrono_types::make_shared<ChMaterialSurfaceSMC>();
-    ground_mat->SetKn(350);  // contact normal stiffness
-    ground_mat->SetKt(350);  // contact tangential stiffness
-    ground_mat->SetGn(25);   // contact normal damping
-    ground_mat->SetGt(25);   // contact tangential damping
-    ground_mat->SetFriction(0.2f);
+    ground_mat->SetKn(35000);  // contact normal stiffness
+    ground_mat->SetKt(35000);  // contact tangential stiffness
+    ground_mat->SetGn(2500);   // contact normal damping
+    ground_mat->SetGt(2500);   // contact tangential damping
+    ground_mat->SetFriction(0.4f);
 
 
     auto ground_mat_vis = chrono_types::make_shared<ChVisualMaterial>(*ChVisualMaterial::Default());

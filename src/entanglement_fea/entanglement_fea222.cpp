@@ -518,13 +518,5 @@ int main(int argc, char* argv[]) {
         */
     }
 
-    std::string gplfilename = out_dir + "/beam_loads.gpl";
-    postprocess::ChGnuPlot mplot(gplfilename.c_str());
-    mplot.SetGrid(false, 1, ChColor(0.8f, 0.8f, 0.8f));
-    mplot.SetLabelX("X");
-    mplot.SetLabelY("Y");
-    mplot.SetCommand("set title 'Free node trajectory'");
-    mplot.Plot(rec, "", " with lines lt -1 lc rgb'#00AAEE' ");
-
     return 0;
 }

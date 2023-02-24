@@ -49,7 +49,7 @@ if(ENABLE_MODULE_IRRLICHT OR ENABLE_MODULE_VSG)
 	endif()
 endif()
 
-option(BUILD_DEMOS_FEA "Build demo programs for FEA" OFF)
+option(BUILD_DEMOS_FEA "Build demo programs for FEA" ON)
 mark_as_advanced(FORCE BUILD_DEMOS_FEA)
 if(BUILD_DEMOS_FEA)
 	add_subdirectory(fea)

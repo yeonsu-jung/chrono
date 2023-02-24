@@ -1,7 +1,7 @@
 #--------------------------------------------------------------
 # List all FEA demos that do have no other dependencies
 set(FEA_DEMOS
-    entanglement_fea
+    entanglement_fea222
 )
 
 # TO DO: ASSERT Irrlicht (ans see if there are any other dependencies)

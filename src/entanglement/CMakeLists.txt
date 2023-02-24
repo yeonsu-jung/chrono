@@ -12,6 +12,8 @@ if(ENABLE_MODULE_IRRLICHT)
     set(DEMOS ${DEMOS}
         entanglement
         entanglement_lateral
+        entanglement_smc2
+        entanglement_fea
     )
 endif()
 
