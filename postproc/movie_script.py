@@ -22,22 +22,9 @@ from vapory import *
 
 # %matplotlib qt
 # %%
-foldername = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha125.0_RandomRods_Alpha125_N392_Date2023-02-14_23-25-09_tstep_1.00simtime_1.00'
-foldername = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha38.0_RandomRods_Alpha38_N119_Date2023-02-14_23-03-10_tstep_1.00simtime_1.00 (1)'
-foldername = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha76.0_RandomRods_Alpha76_N238_Date2023-02-14_23-24-30_tstep_0.50simtime_0.50 (1)'
-foldername = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha200.0_RandomRods_Alpha200_N628_Date2023-02-14_23-23-50_tstep_1.00simtime_1.00 (3)'
-foldername = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha66.0_RandomRods_Alpha66_N207_Date2023-02-14_23-33-50_tstep_0.50simtime_0.50 (1)'
-fname = foldername + '/sim_data.txt'
-# fname = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha200.0_RandomRods_Alpha200_N628_Date2023-02-14_23-23-50_tstep_1.00simtime_1.00/sim_data.txt'
-num_atoms,num_time_steps,variables = check_dump_file(fname)
-print(num_atoms,num_time_steps)
-# root = tk.Tk()
-# init_dir = change_path_across_platforms('C:/Users/yjung/Dropbox (Harvard University)/Entangled/Sims/')
-# filename = filedialog.askopenfilename(initialdir = init_dir)
-# root.destroy()
-# foldername = os.path.dirname(filename)
 foldername = r'C:\Users\yjung\Dropbox (Harvard University)\Entangled\Sims\alpha76.0_RandomRods_Alpha76_N1193_Date2023-02-22_01-36-22_tstep_1.00simtime_1.00'
 foldername = r'C:\Users\yjung\Dropbox (Harvard University)\Entangled\Sims\alpha125.0_RandomRods_Alpha125_N1963_Date2023-02-22_01-42-01_tstep_5.00simtime_5.00 (3)'
+foldername = r'C:\Users\yjung\Dropbox (Harvard University)\Entangled\Sims\alpha38.0_RandomRods_Alpha38_N596_Date2023-02-22_01-17-05_tstep_5.00simtime_5.00'
 
 # foldername = 'C:/Users/yjung/Dropbox (Harvard University)/Entangled/Sims/alpha38.0_RandomRods_Alpha38_N596_Date2023-02-22_01-17-05_tstep_1.00simtime_1.00 (1)'
 # foldername = 'C:/Users/yjung/Dropbox (Harvard University)/Entangled/Sims/alpha125.0_RandomRods_Alpha125_N392_Date2023-02-14_23-25-09_tstep_1.00simtime_1.00 (3)'
@@ -65,7 +52,7 @@ replace_nan_with_nan(motion_chunks)
 
 
 # %% check scene first
-scene_to_test = 5
+scene_to_test = 0
 df0 = pd.DataFrame(np.array(motion_chunks[scene_to_test][5:],dtype=float),columns=motion_chunks[scene_to_test][4][2:])
 # 50th row in df0
 floor_height = df0.y.min()
@@ -77,13 +64,11 @@ box_height = lid_height - floor_height
 centroids = df0.iloc[:-6,2:5].to_numpy()
 quaternions = df0.iloc[:-6,8:12].to_numpy()
 # %%
-import sys
-sys.path.append('C:\\libraries\\povray\\povray-console-bin64')
-# %%
 camera_height = floor_height*1.5
-camera = Camera( 'location', [0,camera_height,-box_height], 'look_at', [0,np.mean(centroids[1],axis=0),0] )
+camera = Camera( 'location', [0,camera_height,-box_height], 'look_at', [0,camera_height,+box_height] )
 light = LightSource( [2,4,-box_height], 'color', [1,1,1] )
 bgd = Background( 'color', [1,1,1] )
+
 cylinders = []
 for cen,q in zip(centroids,quaternions):
     ori = quaternion_vector_rotation(q, (0.0, 1.0, 0.0))
@@ -100,8 +85,8 @@ print(num_atoms,num_time_steps)
 
 # %%
 start_chunk = 0
-last_chunk = 50000
-chunks_to_skip = 100
+last_chunk = 20
+chunks_to_skip = 1
 num_chunks = int((last_chunk - start_chunk)/chunks_to_skip)
 print(num_chunks)
 
