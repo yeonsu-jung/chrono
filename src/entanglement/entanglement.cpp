@@ -396,7 +396,7 @@ void load_rods_from_file(ChSystemNSC& sys,
             chrono_types::make_shared<collision::ChCollisionModelBullet>());
         double local_factor = 1;
         rod->SetPos(ChVector<>((v[0] + v[3]) / 2 * local_factor,
-                               (v[2] + v[5]) / 2 * local_factor - box_height / 2 + rod_radius * 2,
+                               (v[2] + v[5]) / 2 * local_factor - box_height / 2 + rod_radius * 0.1,
                                (v[1] + v[4]) / 2 * local_factor));
         // rod->SetPos(ChVector<>((v[0]*factor*5,v[1]*factor*5,v[2]*factor*5)));
         rod->GetVisualShape(0)->SetTexture(GetChronoDataFile("textures/rock.jpg"));
@@ -648,8 +648,10 @@ int main(int argc, char* argv[]) {
 
     auto vis = chrono_types::make_shared<ChVisualSystemIrrlicht>();
     if (visualize) {
-        ChVector<> camera_position(0, -box_height / 2 + container_height / 2, container_radius * 2.2);
-        ChVector<> look_at(0, -box_height / 2 + container_height / 2, -container_radius * 2.2);
+        // ChVector<> camera_position(0, -box_height / 2 + container_height / 2, container_radius * 2.2);
+        // ChVector<> look_at(0, -box_height / 2 + container_height / 2, -container_radius * 2.2);
+        ChVector<> camera_position(0, -box_height / 2 + container_height / 2, rod_length * 1.2);
+        ChVector<> look_at(0, -box_height / 2 + container_height / 2, -rod_length * 2.2);
 
         vis->AttachSystem(&sys);
         vis->SetWindowSize(800, 600);
@@ -814,39 +816,28 @@ int main(int argc, char* argv[]) {
             GetLog() << '\r' << "time: " << sys.GetChTime() << "\t"
                      << "Number of contacts: " << sys.GetNcontacts();
 
-            write_rod_data(sys, out_file);
-
-            // write contact data
-            contact_outfile << "ITEM: TIMESTEP\n" << sys.GetChTime() << "\n";
-            contact_outfile << "ITEM: NUMBER OF CONTACTS\n" << sys.GetNcontacts() << "\n";  // is this necessary?
-            contact_outfile << "pA.x pA.y pA.z pB.x pB.y pB.z pc00 pc01 pc02 pc10 pc11 pc12 pc20 pc21 pc22 distance "
-                               "eff_radius cfx cfy cfz ctau_x ctau_y ctau_z\n";
-
-            // out_file << "ITEM: TIMESTEP\n" << sys.GetChTime() << "\n";
-            // out_file << "ITEM: NUMBER OF CONTACTS\n" << sys.GetNcontacts() << "\n";
-            // out_file << "ITEM: CONTACTS id1 id2 x y z nx ny nz dist\n";
-            // out_file << "id1 id2 pA1 pA2 pA3 pB1 pB2 pB3 pc00 pc01 pc02 pc10 pc11 pc12 pc20 pc21 pc22 overlap "
-            // "eff_radius cfx cfy cfz ctau_x ctau_y ctau_z\n";
-
-            sys.GetContactContainer()->ReportAllContacts(creporter);
-
-            // initial waiting
-            if (sys.GetChTime() < 5) {
-                sys.Set_G_acc(ChVector<>(0, -9.8, 0));
-                sys.DoStepDynamics(0.01);
-            } else {
-                sys.Set_G_acc(ChVector<>(
-                    0, -9.8 + excitation_amplitude * cos(CH_C_2PI * excitation_frequency * sys.GetChTime()), 0));
-                sys.DoStepDynamics(time_step);
+            if (std::fmod(sys.GetChTime(),data_log_interval) < time_step) {
+                write_rod_data(sys, out_file);
+                sys.GetContactContainer()->ReportAllContacts(creporter);
+                creporter->calculate_contact_averages();
+                creporter->write_contact_data(contact_outfile,
+                                                sys.GetChTime(), // current time
+                                                creporter->get_num_contacts()); // number of contacts                                            
+                creporter->flush_contact_map();
             }
+
+            // initial waiting            
+            sys.Set_G_acc(ChVector<>(
+                0,
+                -9.8 + excitation_amplitude * cos(CH_C_2PI * excitation_frequency * (sys.GetChTime()-waiting_time)),
+                0));
+            sys.DoStepDynamics(time_step);
+            
 
             frame++;
             if (frame % FLUSH_INTERVAL == 0) {
                 out_file.flush();
                 contact_outfile.flush();
-                auto end_time = std::chrono::high_resolution_clock::now();
-                std::chrono::duration<double> elapsed_time = end_time - start_time;
-                GetLog() << "Elapsed time: " << elapsed_time.count() << '\n';
             }
         }
     } else {  // no visualization
