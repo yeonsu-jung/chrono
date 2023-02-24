@@ -521,7 +521,8 @@ void parsing_inputs_from_file(double& rod_radius,
                               double& time_step,
                               double& excitation_frequency,
                               double& excitation_amplitude,
-                              int& num_threads) {
+                              int& num_threads,
+                              double& data_log_interval) {
 #ifdef _WIN32
     std::ifstream file("C:/Users/yjung/Documents/GitHub/chrono/build/bin/Release/inputs.txt");
 #endif
@@ -557,6 +558,8 @@ void parsing_inputs_from_file(double& rod_radius,
             iss >> excitation_amplitude;
         } else if (key == "num_threads") {
             iss >> num_threads;
+        } else if (key == "data_log_interval") {
+            iss >> data_log_interval;
         }
     }
 }
@@ -597,10 +600,12 @@ int main(int argc, char* argv[]) {
     double excitation_frequency = 0;
     double excitation_amplitude = 0;
     int num_threads = 1;
+    double data_log_interval = 0.01;
 
     parsing_inputs_from_file(rod_radius, rod_density, file_path, friction_coefficient, cohesion, visualize,
-                             simulation_time, time_step, excitation_frequency, excitation_amplitude, num_threads);
-
+                             simulation_time, time_step, excitation_frequency, excitation_amplitude, num_threads,
+                             data_log_interval);
+    
     // void load_rods_from_file(ChSystemNSC& sys, std::string file_path, double rod_radius, double rod_length, double
     // rod_density, double box_height, double box_width, double box_thickness) {
 
@@ -632,6 +637,7 @@ int main(int argc, char* argv[]) {
     std::cout << "excitation_frequency: " << excitation_frequency << std::endl;
     std::cout << "excitation_amplitude: " << excitation_amplitude << std::endl;
     std::cout << "num_threads: " << num_threads << std::endl;
+    std::cout << "data_log_interval: " << data_log_interval << std::endl;
 
     // Create all the rigid bodies.
     std::shared_ptr<chrono::ChBody> floorBody;
@@ -747,7 +753,7 @@ int main(int argc, char* argv[]) {
 
     // Simulation loop
     int frame = 0;
-    const int FLUSH_INTERVAL = 1;
+    const int FLUSH_INTERVAL = 1000;
     auto start_time = std::chrono::high_resolution_clock::now();
 
     // bool test = true;
@@ -777,6 +783,27 @@ int main(int argc, char* argv[]) {
 
     //     }
     // }
+    
+    // initial waiting
+    double waiting_time = 3;
+    while (sys.GetChTime() < waiting_time) {
+        // sys.Set_G_acc(ChVector<>(0, -9.8, 0));
+        
+        GetLog() << '\r' << "Initial waiting.\t" << "time: " << sys.GetChTime()
+                    << "\t" << "Number of contacts: " << sys.GetNcontacts();
+
+        if (std::fmod(sys.GetChTime(),data_log_interval) < 0.01) {
+            write_rod_data(sys, out_file);
+            sys.GetContactContainer()->ReportAllContacts(creporter);
+            creporter->calculate_contact_averages();
+            creporter->write_contact_data(contact_outfile,
+                                            sys.GetChTime(), // current time
+                                            creporter->get_num_contacts()); // number of contacts                                            
+            creporter->flush_contact_map();
+        }
+        sys.DoStepDynamics(0.01);
+    }
+    GetLog() << '\n';
 
     if (visualize) {
         while (vis->Run()) {
@@ -829,30 +856,23 @@ int main(int argc, char* argv[]) {
             GetLog() << '\r' << "time: " << sys.GetChTime() << "\t"
                      << "Number of contacts: " << sys.GetNcontacts();
 
-            write_rod_data(sys, out_file);
-            // write contact data
-            // contact_outfile << "ITEM: TIMESTEP\n" << sys.GetChTime() << "\n";
-            // contact_outfile << "ITEM: NUMBER OF CONTACTS\n" << sys.GetNcontacts() << "\n";  // is this necessary?
-            // contact_outfile << "pA.x pA.y pA.z pB.x pB.y pB.z pc00 pc01 pc02 pc10 pc11 pc12 pc20 pc21 pc22 distance "
-            //                    "eff_radius cfx cfy cfz ctau_x ctau_y ctau_z\n";
-
-            sys.GetContactContainer()->ReportAllContacts(creporter);
-            creporter->calculate_contact_averages();
-            creporter->write_contact_data(contact_outfile,
-                                            sys.GetChTime(), // current time
-                                            creporter->get_num_contacts()); // number of contacts
-                                            
-            creporter->flush_contact_map();
-
-            // initial waiting
-            if (sys.GetChTime() < 3) {
-                sys.Set_G_acc(ChVector<>(0, -9.8, 0));
-                sys.DoStepDynamics(0.01);
-            } else {
-                sys.Set_G_acc(ChVector<>(
-                    0, -9.8 + excitation_amplitude * cos(CH_C_2PI * excitation_frequency * sys.GetChTime()), 0));
-                sys.DoStepDynamics(time_step);
+            if (std::fmod(sys.GetChTime(),data_log_interval) < time_step) {
+                write_rod_data(sys, out_file);
+                sys.GetContactContainer()->ReportAllContacts(creporter);
+                creporter->calculate_contact_averages();
+                creporter->write_contact_data(contact_outfile,
+                                                sys.GetChTime(), // current time
+                                                creporter->get_num_contacts()); // number of contacts                                            
+                creporter->flush_contact_map();
             }
+
+            // initial waiting            
+            sys.Set_G_acc(ChVector<>(
+                0,
+                -9.8 + excitation_amplitude * cos(CH_C_2PI * excitation_frequency * (sys.GetChTime()-waiting_time)),
+                0));
+            sys.DoStepDynamics(time_step);
+            
 
             frame++;
             if (frame % FLUSH_INTERVAL == 0) {
