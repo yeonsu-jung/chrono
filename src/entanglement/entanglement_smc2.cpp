@@ -24,7 +24,7 @@
 #include "chrono/assets/ChTexture.h"
 #include "chrono/physics/ChBodyEasy.h"
 #include "chrono/physics/ChLinkMotorRotationSpeed.h"
-#include "chrono/physics/ChSystemNSC.h"
+#include "chrono/physics/ChSystemSMC.h"
 #include "chrono_irrlicht/ChVisualSystemIrrlicht.h"
 // #include "chrono_multicore/physics/ChSystemMulticore.h"
 
@@ -162,7 +162,7 @@ std::string createNumberedDirectory(const std::string& dirPath, const std::strin
     return dirPath + newDirName + "/";
 }
 
-void write_rod_data(ChSystemNSC& sys, std::ofstream& out_file) {
+void write_rod_data(ChSystemSMC& sys, std::ofstream& out_file) {
     out_file << "ITEM: TIMESTEP\n" << sys.GetChTime() << "\n";
     out_file << "ITEM: NUMBER OF ATOMS\n" << sys.Get_bodylist().size() << "\n";  // is this necessary?
     out_file << "ITEM: ATOMS id type x y z vx vy vz u1 u2 u3 u4 w1 w2 w3 fx fy fz tx ty tz\n";
@@ -287,7 +287,7 @@ class ContactReporter : public ChContactContainer::ReportContactCallback {
     // std::ofstream& _contact_outfile;
 };
 
-// void write_contact_data(ChSystemNSC& sys, std::ofstream& out_file, ContactReporter& creporter) {
+// void write_contact_data(ChSystemSMC& sys, std::ofstream& out_file, ContactReporter& creporter) {
 //     out_file << "ITEM: TIMESTEP\n" << sys.GetChTime() << "\n";
 //     out_file << "ITEM: NUMBER OF CONTACTS\n" << sys.GetNcontacts() << "\n";
 //     out_file << "ITEM: CONTACTS id1 id2 x y z nx ny nz dist\n";
@@ -297,7 +297,7 @@ class ContactReporter : public ChContactContainer::ReportContactCallback {
 //     sys.GetContactContainer()->ReportAllContacts(creporter);
 // }
 
-void load_rods_from_file(ChSystemNSC& sys,
+void load_rods_from_file(ChSystemSMC& sys,
                          const std::string file_path,
                          const double& friction_coefficient,
                          const double& cohesion,
@@ -312,12 +312,14 @@ void load_rods_from_file(ChSystemNSC& sys,
                          double& const alpha) {
     std::string generated_time;
 
-    auto mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
+    auto mat = chrono_types::make_shared<ChMaterialSurfaceSMC>();
     // mat->SetFriction(friction_coefficient);
-    mat->SetSfriction(friction_coefficient);
-    mat->SetKfriction(friction_coefficient * 0.5);
-    mat->SetRollingFriction(1);
-    mat->SetCohesion(cohesion);
+    mat->SetKn(350);  // contact normal stiffness
+    mat->SetKt(350);  // contact tangential stiffness
+    mat->SetGn(25);   // contact normal damping
+    mat->SetGt(25);   // contact tangential damping
+    mat->SetFriction(0.2f);
+    
     std::cout << "Loading rods from file: " << file_path << std::endl;
 
     std::ifstream myFile;
@@ -415,7 +417,7 @@ void load_rods_from_file(ChSystemNSC& sys,
     }
 }
 
-std::shared_ptr<chrono::ChBody> create_walls(ChSystemNSC& sys,
+std::shared_ptr<chrono::ChBody> create_walls(ChSystemSMC& sys,
                                              double box_width,
                                              double box_height,
                                              double box_thickness,
@@ -423,11 +425,13 @@ std::shared_ptr<chrono::ChBody> create_walls(ChSystemNSC& sys,
                                              double friction_coefficient,
                                              double cohesion) {
     // Contact and visualization materials for container
-    auto ground_mat = chrono_types::make_shared<ChMaterialSurfaceNSC>();
-    ground_mat->SetFriction(friction_coefficient);
-    ground_mat->SetSfriction(friction_coefficient);
-    ground_mat->SetKfriction(friction_coefficient * 0.5);
-    ground_mat->SetCohesion(cohesion);
+    auto ground_mat = chrono_types::make_shared<ChMaterialSurfaceSMC>();
+    ground_mat->SetKn(350);  // contact normal stiffness
+    ground_mat->SetKt(350);  // contact tangential stiffness
+    ground_mat->SetGn(25);   // contact normal damping
+    ground_mat->SetGt(25);   // contact tangential damping
+    ground_mat->SetFriction(0.2f);
+
 
     auto ground_mat_vis = chrono_types::make_shared<ChVisualMaterial>(*ChVisualMaterial::Default());
     // ground_mat_vis->SetKdTexture(GetChronoDataFile("textures/concrete.jpg"));
@@ -606,12 +610,12 @@ int main(int argc, char* argv[]) {
                              simulation_time, time_step, excitation_frequency, excitation_amplitude, num_threads,
                              data_log_interval);
     
-    // void load_rods_from_file(ChSystemNSC& sys, std::string file_path, double rod_radius, double rod_length, double
+    // void load_rods_from_file(ChSystemSMC& sys, std::string file_path, double rod_radius, double rod_length, double
     // rod_density, double box_height, double box_width, double box_thickness) {
 
     // Create a ChronoENGINE physical system
-    ChSystemNSC sys;
-    // ChSystemMulticoreNSC sys;
+    ChSystemSMC sys;
+    // ChSystemMulticoreSMC sys;
 
     sys.SetNumThreads(num_threads, num_threads, 0);
     // GetLog() << ChOMP::GetNumProcs() << " threads used.\n";
@@ -643,7 +647,7 @@ int main(int argc, char* argv[]) {
     std::shared_ptr<chrono::ChBody> floorBody;
     floorBody = create_walls(sys, box_width, box_height, box_thickness, rod_density, friction_coefficient, cohesion);
 
-    // (ChSystemNSC& sys, std::string file_path, double rod_radius, double rod_length, double rod_density, double
+    // (ChSystemSMC& sys, std::string file_path, double rod_radius, double rod_length, double rod_density, double
     // box_height, double box_width, double box_thickness) Create the Irrlicht visualization system
 
     auto vis = chrono_types::make_shared<ChVisualSystemIrrlicht>();
