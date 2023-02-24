@@ -22,6 +22,15 @@ from vapory import *
 
 # %matplotlib qt
 # %%
+foldername = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha125.0_RandomRods_Alpha125_N392_Date2023-02-14_23-25-09_tstep_1.00simtime_1.00'
+foldername = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha38.0_RandomRods_Alpha38_N119_Date2023-02-14_23-03-10_tstep_1.00simtime_1.00 (1)'
+foldername = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha76.0_RandomRods_Alpha76_N238_Date2023-02-14_23-24-30_tstep_0.50simtime_0.50 (1)'
+foldername = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha200.0_RandomRods_Alpha200_N628_Date2023-02-14_23-23-50_tstep_1.00simtime_1.00 (3)'
+foldername = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha66.0_RandomRods_Alpha66_N207_Date2023-02-14_23-33-50_tstep_0.50simtime_0.50 (1)'
+fname = foldername + '/sim_data.txt'
+# fname = '/Users/yeonsu/Dropbox (Harvard University)/Entangled/Sims/alpha200.0_RandomRods_Alpha200_N628_Date2023-02-14_23-23-50_tstep_1.00simtime_1.00/sim_data.txt'
+num_atoms,num_time_steps,variables = check_dump_file(fname)
+print(num_atoms,num_time_steps)
 # root = tk.Tk()
 # init_dir = change_path_across_platforms('C:/Users/yjung/Dropbox (Harvard University)/Entangled/Sims/')
 # filename = filedialog.askopenfilename(initialdir = init_dir)
@@ -153,21 +162,27 @@ for i,chunk in enumerate(motion_chunks):
     # remove nan rows
     nan_rows = np.isnan(df).any(axis=1)
     df = df[~nan_rows]    
+# run matlab script to make movie
+# os.system(f'matlab -nodisplay -nosplash -nodesktop -r "make_video"')
+# %%
+os.system(f'"/Applications/MATLAB_R2021a.app/bin/matlab" -nodisplay -nosplash -nodesktop -r "make_video("{dir_name}")"')
 
-    cylinders = []
-    for each_rod_data in df[:-6]:
-        cen = each_rod_data[2:5]        
-        quaternion = each_rod_data[8:12]
-        ori = quaternion_vector_rotation(quaternion, (0.0, 1.0, 0.0))
-        base = [cen[0]-ori[0]*rod_length/2, cen[1]-ori[1]*rod_length/2, cen[2]-ori[2]*rod_length/2]
-        cap = [cen[0]+ori[0]*rod_length/2, cen[1]+ori[1]*rod_length/2, cen[2]+ori[2]*rod_length/2]
-        
-        cylinders.append(Cylinder( base, cap, rod_radius, Texture( Pigment( 'color', [1,0,1] ))))
+# %%
 
-    scene = Scene( camera, objects= [light, *cylinders, bgd])
-    with open(f'{dir_name}/img_{i:04d}.pov', 'w') as f:
-        f.write(str(scene))
+cylinders = []
+for each_rod_data in df[:-6]:
+    cen = each_rod_data[2:5]        
+    quaternion = each_rod_data[8:12]
+    ori = quaternion_vector_rotation(quaternion, (0.0, 1.0, 0.0))
+    base = [cen[0]-ori[0]*rod_length/2, cen[1]-ori[1]*rod_length/2, cen[2]-ori[2]*rod_length/2]
+    cap = [cen[0]+ori[0]*rod_length/2, cen[1]+ori[1]*rod_length/2, cen[2]+ori[2]*rod_length/2]
     
+    cylinders.append(Cylinder( base, cap, rod_radius, Texture( Pigment( 'color', [1,0,1] ))))
+
+scene = Scene( camera, objects= [light, *cylinders, bgd])
+with open(f'{dir_name}/img_{i:04d}.pov', 'w') as f:
+    f.write(str(scene))
+
 
 # %%
 # N = len(contact_chunks)
